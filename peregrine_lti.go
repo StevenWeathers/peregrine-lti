@@ -1,5 +1,11 @@
 package peregrine_lti
 
-// New returns a new LaunchService
-func New() {
+import (
+	"github.com/stevenweathers/peregrine-lti/launch"
+	"github.com/stevenweathers/peregrine-lti/peregrine"
+)
+
+// New returns a new launch.Service
+func New(dataSvc peregrine.ToolDataRepo) *launch.Service {
+	return launch.New(dataSvc)
 }
