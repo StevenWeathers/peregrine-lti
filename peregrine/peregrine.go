@@ -1,8 +1,9 @@
 package peregrine
 
 import (
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Platform represents the LMS Platform unique by Issuer
