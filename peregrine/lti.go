@@ -74,6 +74,8 @@ type Platform struct {
 type PlatformInstance struct {
 	// ID (REQUIRED) is the tools UUID for the PlatformInstance
 	ID uuid.UUID
+	// Platform (REQUIRED) is the Platform in which the Instance lives
+	Platform *Platform
 	// GUID (REQUIRED)
 	// A stable locally unique to the iss identifier for an instance of the tool platform.
 	// The value of guid is a case-sensitive string that MUST NOT exceed 255 ASCII characters in length.
@@ -114,7 +116,7 @@ type Deployment struct {
 	// PlatformDeploymentID (REQUIRED)
 	// When a user deploys a tool within their tool platform, the platform MUST generate an immutable deployment_id
 	// identifier to identify the integration.
-	PlatformDeployment string
+	PlatformDeploymentID string
 	// Registration (REQUIRED) is the Deployment of to the Registration in the Platform
 	Registration *Registration
 	// Name (OPTIONAL) for the Deployment location e.g. Global or Sub account
@@ -133,6 +135,8 @@ type Launch struct {
 	Registration *Registration
 	// Deployment (OPTIONAL) is the Deployment in which the Launch event occurred
 	Deployment *Deployment
+	// PlatformInstance (OPTIONAL) is the PlatformInstance in which the Launch event occurred
+	PlatformInstance *PlatformInstance
 	// Used (OPTIONAL) is the timestamp of when the Launch was completed, upon completion the
 	// Launch should not be reusable (whether querying by Nonce or ID)
 	Used time.Time
