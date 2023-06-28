@@ -1,5 +1,5 @@
 package peregrine_lti
 
-// New returns a new peregrine.LaunchService
+// New returns a new LaunchService
 func New() {
 }
