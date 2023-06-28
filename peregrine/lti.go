@@ -7,6 +7,14 @@ import (
 
 // ToolDataRepo is intended to be a storage (e.g. DB) service for an LTI Tools registration and launch
 type ToolDataRepo interface {
+	// GetPlatform should return a Platform by ID
+	GetPlatform(id uuid.UUID) (Platform, error)
+	// CreatePlatform should create a Platform returning Platform with ID
+	CreatePlatform(platform Platform) (Platform, error)
+	// UpdatePlatform should update a Platform by ID
+	UpdatePlatform(platform Platform) (Platform, error)
+	// DeletePlatform should delete a Platform by ID
+	DeletePlatform(id uuid.UUID) (Platform, error)
 	// GetPlatformInstance should return a PlatformInstance by ID
 	GetPlatformInstance(id uuid.UUID) (PlatformInstance, error)
 	// GetPlatformInstanceByGUID should return a PlatformInstance by GUID
@@ -47,12 +55,24 @@ type ToolDataRepo interface {
 	DeleteLaunch(id uuid.UUID) error
 }
 
+// Platform represents the LMS Platform unique by Issuer
+type Platform struct {
+	// ID (REQUIRED) is the tools UUID for the Platform
+	ID uuid.UUID
+	// Issuer (REQUIRED) is the id_token JWT issuer ex. https://canvas.instructure.com
+	Issuer string
+	// KeySetURL (REQUIRED) or URL for the Platform JWK key set ex. https://sso.canvaslms.com/api/lti/authorize_redirect
+	KeySetURL string
+	// AuthLoginURL (REQUIRED) is the url for the Platform launch authentication
+	AuthLoginURL string
+}
+
 // PlatformInstance composes properties associated with the platform instance initiating the launch
 // optional https://purl.imsglobal.org/spec/lti/claim/tool_platform claim
 // In a multi-tenancy case, a single platform (iss) will host multiple instances,
 // but each LTI message is originating from a single instance identified by its guid.
 type PlatformInstance struct {
-	// ID (REQUIRED) is the tools UUID for the Platform Instance
+	// ID (REQUIRED) is the tools UUID for the PlatformInstance
 	ID uuid.UUID
 	// GUID (REQUIRED)
 	// A stable locally unique to the iss identifier for an instance of the tool platform.
@@ -77,16 +97,10 @@ type PlatformInstance struct {
 type Registration struct {
 	// ID is the tools UUID for the Tool Registration
 	ID uuid.UUID
-	// PlatformInstanceID (REQUIRED) is the Platform Instance in which the Tool is Registered
-	PlatformInstanceID uuid.UUID
+	// Platform (REQUIRED) is the Platform in which the Tool is Registered
+	Platform *Platform
 	// ClientID (REQUIRED) or client_id is the tool registration ID in the Platform Instance
 	ClientID string
-	// Issuer (REQUIRED) is the id_token JWT issuer
-	Issuer string
-	// KeySetURL (REQUIRED) or JWK URL for the PlatformInstance
-	KeySetURL string
-	// AuthLoginURL (REQUIRED) is the redirect_uri for the PlatformInstance launch
-	AuthLoginURL string
 }
 
 // Deployment
@@ -100,10 +114,9 @@ type Deployment struct {
 	// PlatformDeploymentID (REQUIRED)
 	// When a user deploys a tool within their tool platform, the platform MUST generate an immutable deployment_id
 	// identifier to identify the integration.
-	PlatformDeploymentID string
-	// RegistrationID (REQUIRED) associates the Deployment back to the Registration
-	// of the Tool in the Platform Instance
-	RegistrationID uuid.UUID
+	PlatformDeployment string
+	// Registration (REQUIRED) is the Deployment of to the Registration in the Platform
+	Registration *Registration
 	// Name (OPTIONAL) for the Deployment location e.g. Global or Sub account
 	Name string
 	// Description (OPTIONAL) of the Deployment e.g. In Course Navigation
@@ -115,11 +128,11 @@ type Launch struct {
 	// ID (REQUIRED) is the tools UUID for the Launch event
 	ID uuid.UUID
 	// Nonce (REQUIRED) is the tools UNIQUE Nonce for the Launch event
-	Nonce string
-	// RegistrationID (REQUIRED) is the ID of the Registration in which the Launch event occurred
-	RegistrationID uuid.UUID
-	// DeploymentID (OPTIONAL) is the ID of the Deployment in which the Launch event occurred
-	DeploymentID uuid.NullUUID
+	Nonce uuid.UUID
+	// Registration (REQUIRED) is the Registration in which the Launch event occurred
+	Registration *Registration
+	// Deployment (OPTIONAL) is the Deployment in which the Launch event occurred
+	Deployment *Deployment
 	// Used (OPTIONAL) is the timestamp of when the Launch was completed, upon completion the
 	// Launch should not be reusable (whether querying by Nonce or ID)
 	Used time.Time
