@@ -110,7 +110,7 @@ type Deployment struct {
 	Description string
 }
 
-// Launch is the individual user launch event in the Platform
+// Launch is the LTI tool launch event in the PlatformInstance
 type Launch struct {
 	// ID (REQUIRED) is the tools UUID for the Launch event
 	ID uuid.UUID
