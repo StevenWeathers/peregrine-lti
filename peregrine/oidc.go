@@ -239,6 +239,7 @@ type LISClaim struct {
 // see https://www.imsglobal.org/spec/lti/v1p3#required-message-claims
 // and https://www.imsglobal.org/spec/lti/v1p3#optional-message-claims
 // and https://www.imsglobal.org/spec/lti/v1p3#user-identity-claims
+// see example of full claims at https://www.imsglobal.org/spec/lti/v1p3#examplelinkrequest
 type LTI1p3Claims struct {
 	// MessageType (REQUIRED) claim's value contains a string that indicates the type of the sender's LTI message.
 	// For conformance with this specification, the claim must have the value LtiResourceLinkRequest.
