@@ -58,7 +58,7 @@ type OIDCLoginResponseParams struct {
 	Prompt string `json:"prompt"`
 	// LTIMessageHint (OPTIONAL)
 	// If present in the login initiation request, the tool MUST include it back in the authentication request unaltered.
-	LTIMessageHint string `json:"lti_message_hint"`
+	LTIMessageHint string `json:"lti_message_hint,omitempty"`
 }
 
 // OIDCAuthenticationResponse as documented here
