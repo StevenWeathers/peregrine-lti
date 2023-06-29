@@ -26,7 +26,9 @@ func (s *Service) HandleOidcLogin() (interface{}, error) {
 }
 
 // HandleOidcCallback recieves the peregrine.OIDCAuthenticationResponse
-// then validates the state and id_token (with claims)
+// then validates the state and id_token (with claims) as per
+// http://www.imsglobal.org/spec/security/v1p0/#authentication-response-validation
+// and https://www.imsglobal.org/spec/lti/v1p3#required-message-claims
 // returning the LTI spec claims omitting oidc claims
 func (s *Service) HandleOidcCallback() (interface{}, error) {
 	return nil, nil
