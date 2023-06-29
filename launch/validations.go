@@ -109,6 +109,7 @@ func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idT
 	verifiedToken, err := jwt.Parse(
 		[]byte(idToken), jwt.WithKeySet(keySet), jwt.WithIssuer(launch.Registration.Platform.Issuer),
 		jwt.WithAudience(launch.Registration.ClientID),
+		jwt.WithRequiredClaim("https://purl.imsglobal.org/spec/lti/claim/deployment_id"),
 	)
 	if err != nil {
 		fmt.Printf("failed to verify JWS: %s\n", err)
@@ -136,17 +137,20 @@ func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idT
 	}
 
 	// validate deployment_id exists and if launch had deployment_id that it matches
-	deploymentId, depExists := claims["https://purl.imsglobal.org/spec/lti/claim/deployment_id"]
-	if !depExists {
-		return idt, fmt.Errorf("deployment_id missing from id_token")
-	}
-	if launch.Deployment != nil && deploymentId.(string) != launch.Deployment.ID.String() {
+	deploymentId := claims["https://purl.imsglobal.org/spec/lti/claim/deployment_id"].(string)
+	if launch.Deployment != nil && deploymentId != launch.Deployment.ID.String() {
 		return idt, fmt.Errorf(
 			"launch deployment_id %s does not match id_token deployment_id %s",
-			launch.Deployment.ID.String(), deploymentId.(string),
+			launch.Deployment.ID.String(), deploymentId,
 		)
 	} else {
-		// @TODO - check for peregrine.Deployment in data source
+		_, err := s.dataSvc.GetDeploymentByPlatformDeploymentID(ctx, deploymentId)
+		if err != nil {
+			return idt, fmt.Errorf(
+				"lms deployment_id %s not found in tool lti data source",
+				deploymentId,
+			)
+		}
 	}
 
 	// @TODO - get peregrine.PlatformInstance and validate guid against id_token claim
