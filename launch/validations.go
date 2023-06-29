@@ -19,16 +19,16 @@ const launchIDClaim = "lti_launch_id"
 
 func validateLoginRequestParams(params peregrine.OIDCLoginRequestParams) error {
 	if params.Issuer == "" {
-		return fmt.Errorf("missing iss")
+		return fmt.Errorf("MISSING_ISS")
 	}
 	if params.ClientID == "" {
-		return fmt.Errorf("missing client_id")
+		return fmt.Errorf("MISSING_CLIENT_ID")
 	}
 	if params.LoginHint == "" {
-		return fmt.Errorf("missing login_hint")
+		return fmt.Errorf("MISSING_LOGIN_HINT")
 	}
 	if params.TargetLinkURI == "" {
-		return fmt.Errorf("missing target_link_uri")
+		return fmt.Errorf("MISSING_TARGET_LINK_URI")
 	}
 
 	return nil
