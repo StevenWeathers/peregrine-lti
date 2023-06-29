@@ -88,26 +88,29 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 // then validates the state and id_token (with claims) as per
 // http://www.imsglobal.org/spec/security/v1p0/#authentication-response-validation
 // and https://www.imsglobal.org/spec/lti/v1p3#required-message-claims
-// returning the LTI spec claims omitting oidc claims
-func (s *Service) HandleOidcCallback(ctx context.Context, params peregrine.OIDCAuthenticationResponse) (peregrine.LTI1p3Claims, error) {
+// returning the LTI spec claims omitting oidc claims and the peregrine.Launch
+func (s *Service) HandleOidcCallback(ctx context.Context, params peregrine.OIDCAuthenticationResponse) (
+	peregrine.LTI1p3Claims, peregrine.Launch, error,
+) {
+	launch := peregrine.Launch{}
 	resp := peregrine.LTI1p3Claims{}
 
 	launchID, err := s.validateState(params.State)
 	if err != nil {
-		return resp, err
+		return resp, launch, err
 	}
 
-	launch, err := s.dataSvc.GetLaunch(ctx, launchID)
+	launch, err = s.dataSvc.GetLaunch(ctx, launchID)
 	if err != nil {
-		return resp, err
+		return resp, launch, err
 	}
 
 	claims, err := s.parseIDToken(ctx, launch, params.IDToken)
 	if err != nil {
-		return resp, err
+		return resp, launch, err
 	}
 
 	resp = claims
 
-	return resp, nil
+	return resp, launch, nil
 }
