@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/stevenweathers/peregrine-lti/peregrine"
+
 	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -14,6 +16,23 @@ import (
 )
 
 const launchIDClaim = "lti_launch_id"
+
+func validateLoginRequestParams(params peregrine.OIDCLoginRequestParams) error {
+	if params.Issuer == "" {
+		return fmt.Errorf("missing iss")
+	}
+	if params.ClientID == "" {
+		return fmt.Errorf("missing client_id")
+	}
+	if params.LoginHint == "" {
+		return fmt.Errorf("missing login_hint")
+	}
+	if params.TargetLinkURI == "" {
+		return fmt.Errorf("missing target_link_uri")
+	}
+
+	return nil
+}
 
 // getPlatformJWKs retrieves the platforms jwk key set used to parse the oidc id_token jwt
 // caching the jwk key set in memory to improve performance
@@ -32,6 +51,7 @@ func (s *Service) createLaunchState(launchID uuid.UUID) (string, error) {
 	tok, err := jwt.NewBuilder().
 		Issuer(s.config.Issuer).
 		IssuedAt(time.Now()).
+		Expiration(time.Now().Add(time.Minute*10)).
 		Claim(launchIDClaim, launchID.String()).
 		Build()
 	if err != nil {
