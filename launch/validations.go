@@ -10,7 +10,6 @@ import (
 	"github.com/stevenweathers/peregrine-lti/peregrine"
 
 	"github.com/google/uuid"
-	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
@@ -65,7 +64,7 @@ func (s *Service) createLaunchState(launchID uuid.UUID) (string, error) {
 		return state, err
 	}
 
-	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.DIRECT, key))
+	signed, err := jwt.Sign(tok, jwt.WithKey(key.Algorithm(), key))
 	if err != nil {
 		return state, err
 	}
@@ -84,7 +83,7 @@ func (s *Service) validateState(state string) (uuid.UUID, error) {
 		return launchID, err
 	}
 
-	verifiedToken, err := jwt.Parse([]byte(state), jwt.WithKey(jwa.DIRECT, key))
+	verifiedToken, err := jwt.Parse([]byte(state), jwt.WithKey(key.Algorithm(), key))
 	if err != nil {
 		return launchID, fmt.Errorf("failed to verify JWS: %s\n", err)
 	}
