@@ -257,7 +257,7 @@ type LTI1p3Claims struct {
 	TargetLinkURI string `json:"https://purl.imsglobal.org/spec/lti/claim/target_link_uri"`
 	// ResourceLinkClaim (REQUIRED)
 	// Claim composes properties for the resource link from which the launch message occurs
-	ResourceLink ResourceLinkClaim `json:"https://purl.imsglobal.org/spec/lti/claim/resource_link "`
+	ResourceLink ResourceLinkClaim `json:"https://purl.imsglobal.org/spec/lti/claim/resource_link"`
 	// SUB (OPTIONAL)
 	// This is the only required user claim (except, see anonymous launch case following).
 	// When included, per OIDC specifications, the sub (Subject) MUST be a stable locally unique to the iss (Issuer)
