@@ -2,8 +2,6 @@ package launch
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -62,8 +60,7 @@ func (s *Service) createLaunchState(launchID uuid.UUID) (string, error) {
 		return state, err
 	}
 
-	// @TODO - replace this temporary private key with a configurable key solution
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := jwk.FromRaw([]byte(s.config.JWTKeySecret))
 	if err != nil {
 		return state, err
 	}
@@ -81,8 +78,13 @@ func (s *Service) createLaunchState(launchID uuid.UUID) (string, error) {
 // validateState parses the jwt with the configured key and returns the Launch.ID from the jwt claims
 func (s *Service) validateState(state string) (uuid.UUID, error) {
 	launchID := uuid.New()
-	// @TODO - replace key string with public key from configured key
-	verifiedToken, err := jwt.Parse([]byte(state), jwt.WithKey(jwa.RS256, ""))
+
+	key, err := jwk.FromRaw([]byte(s.config.JWTKeySecret))
+	if err != nil {
+		return launchID, err
+	}
+
+	verifiedToken, err := jwt.Parse([]byte(state), jwt.WithKey(jwa.RS256, key))
 	if err != nil {
 		return launchID, fmt.Errorf("failed to verify JWS: %s\n", err)
 	}

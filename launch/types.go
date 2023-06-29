@@ -9,6 +9,8 @@ import (
 type Config struct {
 	// Issuer (REQUIRED) is the issuer used to sign the state JWT
 	Issuer string
+	// JWTKeySecret (REQUIRED) is the secret used to create the state JWT
+	JWTKeySecret string
 }
 
 // Service provides handlers for the LTI launch

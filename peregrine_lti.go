@@ -6,6 +6,6 @@ import (
 )
 
 // New returns a new launch.Service
-func New(dataSvc peregrine.ToolDataRepo) *launch.Service {
-	return launch.New(dataSvc)
+func New(config launch.Config, dataSvc peregrine.ToolDataRepo) *launch.Service {
+	return launch.New(config, dataSvc)
 }
