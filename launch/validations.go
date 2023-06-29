@@ -38,10 +38,12 @@ func validateLoginRequestParams(params peregrine.OIDCLoginRequestParams) error {
 // caching the jwk key set in memory to improve performance
 func (s *Service) getPlatformJWKs(ctx context.Context, jwkURL string) (jwk.Set, error) {
 	if !s.jwkCache.IsRegistered(jwkURL) {
-		err := s.jwkCache.Register(jwkURL)
-		return nil, err
+		_ = s.jwkCache.Register(jwkURL)
+		if _, err := s.jwkCache.Refresh(ctx, jwkURL); err != nil {
+			return nil, err
+		}
 	}
-	return s.jwkCache.Refresh(ctx, jwkURL)
+	return s.jwkCache.Get(ctx, jwkURL)
 }
 
 // createLaunchState builds a jwt to act as the state value for the oidc login flow returning jwt as a string
