@@ -22,8 +22,11 @@ func New(config Config, dataSvc peregrine.ToolDataRepo) *Service {
 // HandleOidcLogin receives the peregrine.OIDCLoginRequestParams
 // then validates the request and builds the peregrine.OIDCLoginResponseParams
 // to send the Platform in the redirect to peregrine.Platform AuthLoginURL
-func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLoginRequestParams) (peregrine.OIDCLoginResponseParams, error) {
+func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLoginRequestParams) (
+	response peregrine.OIDCLoginResponseParams, redirectUrl string, error error,
+) {
 	var deployment *peregrine.Deployment
+	var redir string
 	resp := peregrine.OIDCLoginResponseParams{
 		Scope:          "openid",
 		ResponseType:   "id_token",
@@ -36,16 +39,17 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 
 	err := validateLoginRequestParams(params)
 	if err != nil {
-		return resp, err
+		return resp, redir, err
 	}
 
 	registration, err := s.dataSvc.GetRegistrationByClientID(ctx, params.ClientID)
 	if err != nil {
-		return resp, err
+		return resp, redir, err
 	}
+	redir = registration.Platform.AuthLoginURL
 
 	if params.Issuer != registration.Platform.Issuer {
-		return resp, fmt.Errorf(
+		return resp, redir, fmt.Errorf(
 			"request issuer %s does not match registration issuer %s",
 			params.Issuer, registration.Platform.Issuer,
 		)
@@ -54,7 +58,7 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 	if params.LTIDeploymentID != "" {
 		dep, err := s.dataSvc.GetDeploymentByPlatformDeploymentID(ctx, params.LTIDeploymentID)
 		if err != nil {
-			return resp, fmt.Errorf(
+			return resp, redir, fmt.Errorf(
 				"lms deployment_id %s not found in tool lti data source",
 				params.LTIDeploymentID,
 			)
@@ -67,17 +71,17 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 		Deployment:   deployment,
 	})
 	if err != nil {
-		return resp, err
+		return resp, redir, err
 	}
 	resp.Nonce = launch.Nonce.String()
 
 	state, err := s.createLaunchState(launch.ID)
 	if err != nil {
-		return resp, err
+		return resp, redir, err
 	}
 	resp.State = state
 
-	return resp, nil
+	return resp, redir, nil
 }
 
 // HandleOidcCallback receives the peregrine.OIDCAuthenticationResponse
