@@ -98,12 +98,12 @@ func (s *Service) HandleOidcCallback(ctx context.Context, params peregrine.OIDCA
 		return resp, err
 	}
 
-	keySet, err := s.getPlatformJWKs(ctx, launch.Registration.Platform.KeySetURL)
+	claims, err := s.parseIDToken(ctx, launch, params.IDToken)
 	if err != nil {
-		return resp, fmt.Errorf("unable to retrieve %s keyset: %v", launch.Registration.Platform.KeySetURL, err)
+		return resp, err
 	}
 
-	_ = keySet
+	resp = claims
 
 	return resp, nil
 }
