@@ -85,8 +85,25 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 // http://www.imsglobal.org/spec/security/v1p0/#authentication-response-validation
 // and https://www.imsglobal.org/spec/lti/v1p3#required-message-claims
 // returning the LTI spec claims omitting oidc claims
-func (s *Service) HandleOidcCallback(params peregrine.OIDCAuthenticationResponse) (peregrine.LTI1p3Claims, error) {
-	res := peregrine.LTI1p3Claims{}
+func (s *Service) HandleOidcCallback(ctx context.Context, params peregrine.OIDCAuthenticationResponse) (peregrine.LTI1p3Claims, error) {
+	resp := peregrine.LTI1p3Claims{}
 
-	return res, nil
+	launchID, err := s.validateState(params.State)
+	if err != nil {
+		return resp, err
+	}
+
+	launch, err := s.dataSvc.GetLaunch(ctx, launchID)
+	if err != nil {
+		return resp, err
+	}
+
+	keySet, err := s.getPlatformJWKs(ctx, launch.Registration.Platform.KeySetURL)
+	if err != nil {
+		return resp, fmt.Errorf("unable to retrieve %s keyset: %v", launch.Registration.Platform.KeySetURL, err)
+	}
+
+	_ = keySet
+
+	return resp, nil
 }
