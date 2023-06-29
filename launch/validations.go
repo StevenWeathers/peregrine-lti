@@ -80,8 +80,7 @@ func (s *Service) validateState(state string) (uuid.UUID, error) {
 	// @TODO - replace key string with public key from configured key
 	verifiedToken, err := jwt.Parse([]byte(state), jwt.WithKey(jwa.RS256, ""))
 	if err != nil {
-		fmt.Printf("failed to verify JWS: %s\n", err)
-		return launchID, err
+		return launchID, fmt.Errorf("failed to verify JWS: %s\n", err)
 	}
 	claims := verifiedToken.PrivateClaims()
 	lid, ok := claims[launchIDClaim]
@@ -91,4 +90,66 @@ func (s *Service) validateState(state string) (uuid.UUID, error) {
 	launchID = lid.(uuid.UUID)
 
 	return launchID, nil
+}
+
+// parseIDToken validates the id_token jwt with the peregrine.Platform keyset returning peregrine.LTI1p3Claims
+func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idToken string) (peregrine.LTI1p3Claims, error) {
+	idt := peregrine.LTI1p3Claims{}
+	keysetUrl := launch.Registration.Platform.KeySetURL
+
+	keySet, err := s.getPlatformJWKs(ctx, keysetUrl)
+	if err != nil {
+		return idt, fmt.Errorf("unable to retrieve %s keyset: %v", keysetUrl, err)
+	}
+
+	// validate that the id_token jwt is can be parsed and return a verified token
+	// including verifying the issuer and client_id from peregrine.Launch.Platform
+	verifiedToken, err := jwt.Parse(
+		[]byte(idToken), jwt.WithKeySet(keySet), jwt.WithIssuer(launch.Registration.Platform.Issuer),
+		jwt.WithAudience(launch.Registration.ClientID),
+	)
+	if err != nil {
+		fmt.Printf("failed to verify JWS: %s\n", err)
+		return idt, err
+	}
+	claims := verifiedToken.PrivateClaims()
+
+	// validate that nonce is in the id_token and matches peregrine.Launch nonce
+	nonce, ok := claims["nonce"]
+	if !ok {
+		return idt, fmt.Errorf("nonce missing from id_token")
+	}
+	if nonce.(string) != launch.Nonce.String() {
+		return idt, fmt.Errorf(
+			"id_token nonce %s does not match launch nonce %s",
+			nonce.(string), launch.Nonce.String(),
+		)
+	}
+
+	// @TODO - how to handle azp?
+
+	sub, subExist := claims["sub"]
+	if subExist && (len(sub.(string)) > 255) {
+		return idt, fmt.Errorf("sub %s in id_token exceeds 255 characters", sub.(string))
+	}
+
+	// validate deployment_id exists and if launch had deployment_id that it matches
+	deploymentId, depExists := claims["https://purl.imsglobal.org/spec/lti/claim/deployment_id"]
+	if !depExists {
+		return idt, fmt.Errorf("deployment_id missing from id_token")
+	}
+	if launch.Deployment != nil && deploymentId.(string) != launch.Deployment.ID.String() {
+		return idt, fmt.Errorf(
+			"launch deployment_id %s does not match id_token deployment_id %s",
+			launch.Deployment.ID.String(), deploymentId.(string),
+		)
+	} else {
+		// @TODO - check for peregrine.Deployment in data source
+	}
+
+	// @TODO - get peregrine.PlatformInstance and validate guid against id_token claim
+	// @TODO - update launch with peregrine.Deployment ID and peregrine.PlatformInstance ID
+	// @TODO - parse LTI claims into response struct
+
+	return idt, nil
 }
