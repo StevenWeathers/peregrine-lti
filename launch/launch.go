@@ -21,15 +21,19 @@ func New(config Config, dataSvc peregrine.ToolDataRepo) *Service {
 // HandleOidcLogin receives the peregrine.OIDCLoginRequestParams
 // then validates the request and builds the peregrine.OIDCLoginResponseParams
 // to send the Platform in the redirect to peregrine.Platform AuthLoginURL
-func (s *Service) HandleOidcLogin() (interface{}, error) {
-	return nil, nil
+func (s *Service) HandleOidcLogin(params peregrine.OIDCLoginRequestParams) (peregrine.OIDCLoginResponseParams, error) {
+	resp := peregrine.OIDCLoginResponseParams{}
+
+	return resp, nil
 }
 
-// HandleOidcCallback recieves the peregrine.OIDCAuthenticationResponse
+// HandleOidcCallback receives the peregrine.OIDCAuthenticationResponse
 // then validates the state and id_token (with claims) as per
 // http://www.imsglobal.org/spec/security/v1p0/#authentication-response-validation
 // and https://www.imsglobal.org/spec/lti/v1p3#required-message-claims
 // returning the LTI spec claims omitting oidc claims
-func (s *Service) HandleOidcCallback() (interface{}, error) {
-	return nil, nil
+func (s *Service) HandleOidcCallback(params peregrine.OIDCAuthenticationResponse) (peregrine.LTI1p3Claims, error) {
+	res := peregrine.LTI1p3Claims{}
+
+	return res, nil
 }
