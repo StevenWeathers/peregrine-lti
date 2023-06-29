@@ -4,10 +4,10 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/json"
 	"fmt"
+	"log"
 	"time"
-
-	"github.com/mitchellh/mapstructure"
 
 	"github.com/stevenweathers/peregrine-lti/peregrine"
 
@@ -122,13 +122,12 @@ func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idT
 		return lti1p3Claims, fmt.Errorf("invalid id_token")
 	}
 
-	cfg := &mapstructure.DecoderConfig{
-		Metadata: nil,
-		Result:   &lti1p3Claims,
-		TagName:  "json",
+	jsonData, err := json.Marshal(verifiedToken.PrivateClaims())
+	if err != nil {
+		log.Fatal(err)
 	}
-	decoder, _ := mapstructure.NewDecoder(cfg)
-	err = decoder.Decode(verifiedToken.PrivateClaims())
+
+	err = json.Unmarshal(jsonData, &lti1p3Claims)
 	if err != nil {
 		return lti1p3Claims, fmt.Errorf("failed to decode LTI claims %v", err)
 	}
