@@ -93,7 +93,10 @@ func (s *Service) validateState(state string) (uuid.UUID, error) {
 	if !ok {
 		return launchID, fmt.Errorf("%s claim not found in launch state jwt", launchIDClaim)
 	}
-	launchID = lid.(uuid.UUID)
+	launchID, err = uuid.Parse(lid.(string))
+	if err != nil {
+		return launchID, fmt.Errorf("%s claim not a uuid", launchIDClaim)
+	}
 
 	return launchID, nil
 }
