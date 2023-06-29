@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/lestrrat-go/jwx/v2/jwa"
 	"log"
 	"time"
 
@@ -64,7 +65,7 @@ func (s *Service) createLaunchState(launchID uuid.UUID) (string, error) {
 		return state, err
 	}
 
-	signed, err := jwt.Sign(tok, jwt.WithKey(key.Algorithm(), key))
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.NoSignature, key))
 	if err != nil {
 		return state, err
 	}
@@ -83,7 +84,7 @@ func (s *Service) validateState(state string) (uuid.UUID, error) {
 		return launchID, err
 	}
 
-	verifiedToken, err := jwt.Parse([]byte(state), jwt.WithKey(key.Algorithm(), key))
+	verifiedToken, err := jwt.Parse([]byte(state), jwt.WithKey(jwa.NoSignature, key))
 	if err != nil {
 		return launchID, fmt.Errorf("failed to verify JWS: %s\n", err)
 	}
