@@ -179,10 +179,10 @@ type LaunchPresentationClaim struct {
 	DocumentTarget string `json:"document_target"`
 	// Height (OPTIONAL)
 	// height of the window or frame where the content from the message receiver will be displayed to the user.
-	Height string `json:"height"`
+	Height int `json:"height"`
 	// Weight (OPTIONAL)
 	// width of the window or frame where the content from the message receiver will be displayed to the user.
-	Weight string `json:"width"`
+	Weight int `json:"width"`
 	// ReturnURL (OPTIONAL)
 	// Fully-qualified HTTPS URL within the message sender's user experience to where the message receiver can
 	// redirect the user back. The message receiver can redirect to this URL after the user has finished activity,
