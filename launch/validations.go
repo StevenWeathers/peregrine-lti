@@ -2,11 +2,11 @@ package launch
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"log"
 	"time"
+
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/stevenweathers/peregrine-lti/peregrine"
 
@@ -34,47 +34,6 @@ func validateLoginRequestParams(params peregrine.OIDCLoginRequestParams) error {
 	return nil
 }
 
-// getPlatformJWKs retrieves the platforms jwk key set used to parse the oidc id_token jwt
-// caching the jwk key set in memory to improve performance
-func (s *Service) getPlatformJWKs(ctx context.Context, jwkURL string) (jwk.Set, error) {
-	if !s.jwkCache.IsRegistered(jwkURL) {
-		_ = s.jwkCache.Register(jwkURL)
-		if _, err := s.jwkCache.Refresh(ctx, jwkURL); err != nil {
-			return nil, err
-		}
-	}
-	return s.jwkCache.Get(ctx, jwkURL)
-}
-
-// createLaunchState builds a jwt to act as the state value for the oidc login flow returning jwt as a string
-func (s *Service) createLaunchState(launchID uuid.UUID) (string, error) {
-	var state string
-	// Build a JWT!
-	tok, err := jwt.NewBuilder().
-		Issuer(s.config.Issuer).
-		IssuedAt(time.Now()).
-		Expiration(time.Now().Add(time.Minute*10)).
-		Claim(launchIDClaim, launchID.String()).
-		Build()
-	if err != nil {
-		return state, err
-	}
-
-	key, err := jwk.FromRaw([]byte(s.config.JWTKeySecret))
-	if err != nil {
-		return state, err
-	}
-
-	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, key))
-	if err != nil {
-		return state, err
-	}
-
-	state = string(signed)
-
-	return state, nil
-}
-
 // validateState parses the jwt with the configured key and returns the Launch.ID from the jwt claims
 func (s *Service) validateState(state string) (uuid.UUID, error) {
 	launchID := uuid.New()
@@ -86,7 +45,7 @@ func (s *Service) validateState(state string) (uuid.UUID, error) {
 
 	verifiedToken, err := jwt.Parse([]byte(state), jwt.WithKey(jwa.HS256, key))
 	if err != nil {
-		return launchID, fmt.Errorf("failed to verify JWS: %s\n", err)
+		return launchID, fmt.Errorf("failed to verify JWS: %v", err)
 	}
 	claims := verifiedToken.PrivateClaims()
 	lid, ok := claims[launchIDClaim]
@@ -101,7 +60,7 @@ func (s *Service) validateState(state string) (uuid.UUID, error) {
 	return launchID, nil
 }
 
-// parseIDToken validates the id_token jwt with the peregrine.Platform keyset returning peregrine.LTI1p3Claims
+// parseIDToken validates the id_token jwt with the peregrine.Platform key set returning peregrine.LTI1p3Claims
 func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idToken string) (peregrine.LTI1p3Claims, error) {
 	var lti1p3Claims peregrine.LTI1p3Claims
 	keysetUrl := launch.Registration.Platform.KeySetURL
@@ -124,15 +83,16 @@ func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idT
 		jwt.WithRequiredClaim("https://purl.imsglobal.org/spec/lti/claim/target_link_uri"),
 	)
 	if err != nil {
-		return lti1p3Claims, fmt.Errorf("invalid id_token")
+		return lti1p3Claims, fmt.Errorf("invalid id_token: %v", err)
 	}
 
-	jsonData, err := json.Marshal(verifiedToken.PrivateClaims())
-	if err != nil {
-		log.Fatal(err)
+	cfg := &mapstructure.DecoderConfig{
+		Metadata: nil,
+		Result:   &lti1p3Claims,
+		TagName:  "json",
 	}
-
-	err = json.Unmarshal(jsonData, &lti1p3Claims)
+	decoder, _ := mapstructure.NewDecoder(cfg)
+	err = decoder.Decode(verifiedToken.PrivateClaims())
 	if err != nil {
 		return lti1p3Claims, fmt.Errorf("failed to decode LTI claims %v", err)
 	}
@@ -160,7 +120,9 @@ func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idT
 		launch.Deployment = &deployment
 	}
 
+	// The peregrine.PlatformInstance is purely for audit purposes and not actually meant to be pre-configured by tool
 	if lti1p3Claims.ToolPlatform.GUID != "" {
+		// @TODO - handle if instance not in DB insert it
 		platformInstance, err := s.dataSvc.GetPlatformInstanceByGUID(ctx, lti1p3Claims.ToolPlatform.GUID)
 		if err != nil {
 			return lti1p3Claims, err

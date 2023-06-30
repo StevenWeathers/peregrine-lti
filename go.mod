@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/google/uuid v1.3.0
 	github.com/lestrrat-go/jwx/v2 v2.0.11
+	github.com/mitchellh/mapstructure v1.5.0
 )
 
 require (

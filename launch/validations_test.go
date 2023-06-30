@@ -1,8 +1,9 @@
 package launch
 
 import (
-	"github.com/stevenweathers/peregrine-lti/peregrine"
 	"testing"
+
+	"github.com/stevenweathers/peregrine-lti/peregrine"
 )
 
 func TestValidateLoginRequestParams(t *testing.T) {
