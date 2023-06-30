@@ -19,3 +19,14 @@ type Service struct {
 	dataSvc  peregrine.ToolDataRepo
 	jwkCache *jwk.Cache
 }
+
+// HandleOidcLoginResponse are the return values
+type HandleOidcLoginResponse struct {
+	OIDCLoginResponseParams peregrine.OIDCLoginResponseParams
+	RedirectURL             string
+}
+
+type HandleOidcCallbackResponse struct {
+	Claims peregrine.LTI1p3Claims
+	Launch peregrine.Launch
+}

@@ -23,33 +23,34 @@ func New(config Config, dataSvc peregrine.ToolDataRepo) *Service {
 // then validates the request and builds the peregrine.OIDCLoginResponseParams
 // to send the Platform in the redirect to peregrine.Platform AuthLoginURL
 func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLoginRequestParams) (
-	response peregrine.OIDCLoginResponseParams, redirectUrl string, error error,
+	HandleOidcLoginResponse, error,
 ) {
 	var deployment *peregrine.Deployment
-	var redir string
-	resp := peregrine.OIDCLoginResponseParams{
-		Scope:          "openid",
-		ResponseType:   "id_token",
-		ResponseMode:   "form_post",
-		Prompt:         "none",
-		ClientID:       params.ClientID,
-		LoginHint:      params.LoginHint,
-		LTIMessageHint: params.LTIMessageHint,
+	resp := HandleOidcLoginResponse{
+		OIDCLoginResponseParams: peregrine.OIDCLoginResponseParams{
+			Scope:          "openid",
+			ResponseType:   "id_token",
+			ResponseMode:   "form_post",
+			Prompt:         "none",
+			ClientID:       params.ClientID,
+			LoginHint:      params.LoginHint,
+			LTIMessageHint: params.LTIMessageHint,
+		},
 	}
 
 	err := validateLoginRequestParams(params)
 	if err != nil {
-		return resp, redir, err
+		return resp, err
 	}
 
 	registration, err := s.dataSvc.GetRegistrationByClientID(ctx, params.ClientID)
 	if err != nil {
-		return resp, redir, err
+		return resp, err
 	}
-	redir = registration.Platform.AuthLoginURL
+	resp.RedirectURL = registration.Platform.AuthLoginURL
 
 	if params.Issuer != registration.Platform.Issuer {
-		return resp, redir, fmt.Errorf(
+		return resp, fmt.Errorf(
 			"request issuer %s does not match registration issuer %s",
 			params.Issuer, registration.Platform.Issuer,
 		)
@@ -58,7 +59,7 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 	if params.LTIDeploymentID != "" {
 		dep, err := s.dataSvc.GetDeploymentByPlatformDeploymentID(ctx, params.LTIDeploymentID)
 		if err != nil {
-			return resp, redir, fmt.Errorf(
+			return resp, fmt.Errorf(
 				"lms deployment_id %s not found in tool lti data source",
 				params.LTIDeploymentID,
 			)
@@ -71,46 +72,45 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 		Deployment:   deployment,
 	})
 	if err != nil {
-		return resp, redir, err
+		return resp, err
 	}
-	resp.Nonce = launch.Nonce.String()
+	resp.OIDCLoginResponseParams.Nonce = launch.Nonce.String()
 
 	state, err := s.createLaunchState(launch.ID)
 	if err != nil {
-		return resp, redir, err
+		return resp, err
 	}
-	resp.State = state
+	resp.OIDCLoginResponseParams.State = state
 
-	return resp, redir, nil
+	return resp, nil
 }
 
 // HandleOidcCallback receives the peregrine.OIDCAuthenticationResponse
 // then validates the state and id_token (with claims) as per
 // http://www.imsglobal.org/spec/security/v1p0/#authentication-response-validation
 // and https://www.imsglobal.org/spec/lti/v1p3#required-message-claims
-// returning the LTI spec claims omitting oidc claims and the peregrine.Launch
 func (s *Service) HandleOidcCallback(ctx context.Context, params peregrine.OIDCAuthenticationResponse) (
-	peregrine.LTI1p3Claims, peregrine.Launch, error,
+	HandleOidcCallbackResponse, error,
 ) {
-	launch := peregrine.Launch{}
-	resp := peregrine.LTI1p3Claims{}
+	resp := HandleOidcCallbackResponse{
+		Claims: peregrine.LTI1p3Claims{},
+		Launch: peregrine.Launch{},
+	}
 
 	launchID, err := s.validateState(params.State)
 	if err != nil {
-		return resp, launch, err
+		return resp, err
 	}
 
-	launch, err = s.dataSvc.GetLaunch(ctx, launchID)
+	resp.Launch, err = s.dataSvc.GetLaunch(ctx, launchID)
 	if err != nil {
-		return resp, launch, err
+		return resp, err
 	}
 
-	claims, err := s.parseIDToken(ctx, launch, params.IDToken)
+	resp.Claims, err = s.parseIDToken(ctx, resp.Launch, params.IDToken)
 	if err != nil {
-		return resp, launch, err
+		return resp, err
 	}
 
-	resp = claims
-
-	return resp, launch, nil
+	return resp, nil
 }
