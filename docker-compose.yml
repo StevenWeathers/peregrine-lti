@@ -1,0 +1,22 @@
+services:
+  web:
+    build: .
+    ports:
+      - "9000:9000"
+    environment:
+      DATABASE_URL: "postgres://postgres:example@db:5432/postgres"
+      BACKEND_URL: "https://thor.softwr.net"
+      JWT_SECRET: "bringmemoreale!"
+    links:
+      - db
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: "postgres:15.2"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: example
+    healthcheck:
+      test: pg_isready
