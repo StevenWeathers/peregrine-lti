@@ -9,7 +9,6 @@ import (
 
 	"github.com/stevenweathers/peregrine-lti/example/store"
 	"github.com/stevenweathers/peregrine-lti/launch"
-	"github.com/stevenweathers/peregrine-lti/peregrine"
 )
 
 var launchSvc *launch.Service
@@ -17,20 +16,12 @@ var backendUrl string
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	err := r.ParseForm()
+
+	params, err := launchSvc.GetLoginParamsFromRequestFormValues(r)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
-	}
-
-	params := peregrine.OIDCLoginRequestParams{
-		Issuer:          r.FormValue("iss"),
-		LoginHint:       r.FormValue("login_hint"),
-		TargetLinkURI:   r.FormValue("target_link_uri"),
-		LTIMessageHint:  r.FormValue("lti_message_hint"),
-		ClientID:        r.FormValue("client_id"),
-		LTIDeploymentID: r.FormValue("lti_deployment_id"),
 	}
 
 	response, err := launchSvc.HandleOidcLogin(ctx, params)
@@ -54,17 +45,14 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 func handleCallback(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	err := r.ParseForm()
+
+	params, err := launchSvc.GetCallbackParamsFromRequestFormValues(r)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-
-	params := peregrine.OIDCAuthenticationResponse{
-		State:   r.FormValue("state"),
-		IDToken: r.FormValue("id_token"),
-	}
+	
 	_, err = launchSvc.HandleOidcCallback(ctx, params)
 	if err != nil {
 		log.Println(err)
