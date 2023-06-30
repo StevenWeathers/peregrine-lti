@@ -3,6 +3,7 @@ package launch
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -55,6 +56,45 @@ func (s *Service) createLaunchState(launchID uuid.UUID) (string, error) {
 	return state, nil
 }
 
+// GetLoginParamsFromRequestFormValues parses the *http.Request form values
+// // and populates peregrine.OIDCLoginRequestParams
+func (s *Service) GetLoginParamsFromRequestFormValues(r *http.Request) (peregrine.OIDCLoginRequestParams, error) {
+	resp := peregrine.OIDCLoginRequestParams{}
+	err := r.ParseForm()
+	if err != nil {
+		return resp, fmt.Errorf("failed to parse request formvalues: %v", err)
+	}
+
+	resp = peregrine.OIDCLoginRequestParams{
+		Issuer:          r.FormValue("iss"),
+		LoginHint:       r.FormValue("login_hint"),
+		TargetLinkURI:   r.FormValue("target_link_uri"),
+		LTIMessageHint:  r.FormValue("lti_message_hint"),
+		ClientID:        r.FormValue("client_id"),
+		LTIDeploymentID: r.FormValue("lti_deployment_id"),
+	}
+
+	return resp, nil
+}
+
+// GetCallbackParamsFromRequestFormValues parses the *http.Request form values
+// and populates peregrine.OIDCAuthenticationResponse
+func (s *Service) GetCallbackParamsFromRequestFormValues(r *http.Request) (peregrine.OIDCAuthenticationResponse, error) {
+	resp := peregrine.OIDCAuthenticationResponse{}
+	err := r.ParseForm()
+	if err != nil {
+		return resp, fmt.Errorf("failed to parse request formvalues: %v", err)
+	}
+
+	resp = peregrine.OIDCAuthenticationResponse{
+		State:   r.FormValue("state"),
+		IDToken: r.FormValue("id_token"),
+	}
+
+	return resp, nil
+}
+
+// BuildLoginResponseRedirectURL generates a form_post url to redirect to the peregrine.Platform AuthLoginURL
 func (s *Service) BuildLoginResponseRedirectURL(
 	response peregrine.OIDCLoginResponseParams, platformAuthLoginUrl, callbackUrl string,
 ) (string, error) {
