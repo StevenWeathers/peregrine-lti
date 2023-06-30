@@ -123,11 +123,10 @@ func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idT
 	// The peregrine.PlatformInstance is purely for audit purposes and not actually meant to be pre-configured by tool
 	if lti1p3Claims.ToolPlatform.GUID != "" {
 		// @TODO - handle if instance not in DB insert it
-		platformInstance, err := s.dataSvc.GetPlatformInstanceByGUID(ctx, lti1p3Claims.ToolPlatform.GUID)
-		if err != nil {
-			return lti1p3Claims, err
+		platformInstance, _ := s.dataSvc.GetPlatformInstanceByGUID(ctx, lti1p3Claims.ToolPlatform.GUID)
+		if err == nil {
+			launch.PlatformInstance = &platformInstance
 		}
-		launch.PlatformInstance = &platformInstance
 	}
 
 	used := time.Now()
