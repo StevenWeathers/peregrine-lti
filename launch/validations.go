@@ -96,6 +96,7 @@ func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idT
 	if err != nil {
 		return lti1p3Claims, fmt.Errorf("failed to decode LTI claims %v", err)
 	}
+	lti1p3Claims.SUB = verifiedToken.Subject()
 
 	// @TODO - how to handle azp?
 
