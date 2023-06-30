@@ -2,7 +2,11 @@ package launch
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 	"time"
+
+	"github.com/stevenweathers/peregrine-lti/peregrine"
 
 	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/v2/jwa"
@@ -49,4 +53,34 @@ func (s *Service) createLaunchState(launchID uuid.UUID) (string, error) {
 	state = string(signed)
 
 	return state, nil
+}
+
+func (s *Service) BuildLoginResponseRedirectURL(
+	response peregrine.OIDCLoginResponseParams, platformAuthLoginUrl, callbackUrl string,
+) (string, error) {
+	var redirURL string
+
+	redirReq, err := url.Parse(platformAuthLoginUrl)
+	if err != nil {
+		return redirURL, fmt.Errorf("failed to build OIDC login response redirect URL: %v", err)
+	}
+
+	q := redirReq.Query()
+	q.Add("scope", response.Scope)
+	q.Add("response_type", response.ResponseType)
+	q.Add("response_mode", response.ResponseMode)
+	q.Add("prompt", response.Prompt)
+	q.Add("client_id", response.ClientID)
+	q.Add("redirect_uri", callbackUrl)
+	q.Add("state", response.State)
+	q.Add("nonce", response.Nonce)
+	q.Add("login_hint", response.LoginHint)
+	if response.LTIMessageHint != "" {
+		q.Add("lti_message_hint", response.LTIMessageHint)
+	}
+
+	redirReq.RawQuery = q.Encode()
+	redirURL = redirReq.String()
+
+	return redirURL, nil
 }
