@@ -3,8 +3,6 @@ package launch
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/mitchellh/mapstructure"
 
@@ -108,48 +106,6 @@ func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idT
 			"launch deployment_id %s does not match id_token deployment_id %s",
 			launch.Deployment.ID.String(), lti1p3Claims.DeploymentID,
 		)
-	} else if lti1p3Claims.DeploymentID != "" {
-		deployment, err := s.dataSvc.UpsertDeploymentByPlatformDeploymentID(ctx, peregrine.Deployment{
-			Registration: &peregrine.Registration{
-				ID: launch.Registration.ID,
-			},
-			PlatformDeploymentID: lti1p3Claims.DeploymentID,
-		})
-		if err != nil {
-			return lti1p3Claims, fmt.Errorf(
-				"failed to upsert lms deployment_id %s",
-				lti1p3Claims.DeploymentID,
-			)
-		}
-		launch.Deployment = &deployment
-	}
-
-	// The peregrine.PlatformInstance is purely for audit purposes and not actually meant to be pre-configured by tool
-	if lti1p3Claims.ToolPlatform.GUID != "" {
-		platformInstance, err := s.dataSvc.UpsertPlatformInstanceByGUID(ctx, peregrine.PlatformInstance{
-			GUID: lti1p3Claims.ToolPlatform.GUID,
-			Platform: &peregrine.Platform{
-				ID: launch.Registration.Platform.ID,
-			},
-			ContactEmail:      lti1p3Claims.ToolPlatform.ContactEmail,
-			Description:       lti1p3Claims.ToolPlatform.Description,
-			Name:              lti1p3Claims.ToolPlatform.Name,
-			URL:               lti1p3Claims.ToolPlatform.URL,
-			ProductFamilyCode: lti1p3Claims.ToolPlatform.ProductFamilyCode,
-			Version:           lti1p3Claims.ToolPlatform.Version,
-		})
-		if err != nil {
-			return lti1p3Claims, fmt.Errorf(
-				"failed to upsert PlatformInstance by guid %s: %v", lti1p3Claims.ToolPlatform.GUID, err)
-		}
-		launch.PlatformInstance = &platformInstance
-	}
-
-	used := time.Now()
-	launch.Used = &used
-	_, err = s.dataSvc.UpdateLaunch(ctx, launch)
-	if err != nil {
-		return lti1p3Claims, fmt.Errorf("failed to update launch %s: %v", launch.ID, err)
 	}
 
 	return lti1p3Claims, nil

@@ -3,6 +3,7 @@ package launch
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/stevenweathers/peregrine-lti/peregrine"
@@ -114,6 +115,50 @@ func (s *Service) HandleOidcCallback(ctx context.Context, params peregrine.OIDCA
 	resp.Claims, err = s.parseIDToken(ctx, resp.Launch, params.IDToken)
 	if err != nil {
 		return resp, fmt.Errorf("failed to parse id_token: %v", err)
+	}
+
+	if resp.Claims.DeploymentID != "" && resp.Launch.Deployment == nil {
+		deployment, err := s.dataSvc.UpsertDeploymentByPlatformDeploymentID(ctx, peregrine.Deployment{
+			Registration: &peregrine.Registration{
+				ID: resp.Launch.Registration.ID,
+			},
+			PlatformDeploymentID: resp.Claims.DeploymentID,
+		})
+		if err != nil {
+			return resp, fmt.Errorf(
+				"failed to upsert lms deployment_id %s",
+				resp.Claims.DeploymentID,
+			)
+		}
+		resp.Launch.Deployment = &deployment
+	}
+
+	// The peregrine.PlatformInstance is purely for audit purposes and not actually meant to be pre-configured by tool
+	if resp.Claims.ToolPlatform.GUID != "" {
+		platformInstance, err := s.dataSvc.UpsertPlatformInstanceByGUID(ctx, peregrine.PlatformInstance{
+			GUID: resp.Claims.ToolPlatform.GUID,
+			Platform: &peregrine.Platform{
+				ID: resp.Launch.Registration.Platform.ID,
+			},
+			ContactEmail:      resp.Claims.ToolPlatform.ContactEmail,
+			Description:       resp.Claims.ToolPlatform.Description,
+			Name:              resp.Claims.ToolPlatform.Name,
+			URL:               resp.Claims.ToolPlatform.URL,
+			ProductFamilyCode: resp.Claims.ToolPlatform.ProductFamilyCode,
+			Version:           resp.Claims.ToolPlatform.Version,
+		})
+		if err != nil {
+			return resp, fmt.Errorf(
+				"failed to upsert PlatformInstance by guid %s: %v", resp.Claims.ToolPlatform.GUID, err)
+		}
+		resp.Launch.PlatformInstance = &platformInstance
+	}
+
+	used := time.Now()
+	resp.Launch.Used = &used
+	_, err = s.dataSvc.UpdateLaunch(ctx, resp.Launch)
+	if err != nil {
+		return resp, fmt.Errorf("failed to update launch %s: %v", resp.Launch.ID, err)
 	}
 
 	return resp, nil
