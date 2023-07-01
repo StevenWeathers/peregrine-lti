@@ -40,7 +40,7 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 
 	err := validateLoginRequestParams(params)
 	if err != nil {
-		return resp, err
+		return resp, fmt.Errorf("failed to validate login request params: %v", err)
 	}
 
 	registration, err := s.dataSvc.GetRegistrationByClientID(ctx, params.ClientID)
@@ -82,7 +82,7 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 
 	state, err := s.createLaunchState(launch.ID)
 	if err != nil {
-		return resp, err
+		return resp, fmt.Errorf("failed to create launch state: %v", err)
 	}
 	resp.OIDCLoginResponseParams.State = state
 
@@ -103,7 +103,7 @@ func (s *Service) HandleOidcCallback(ctx context.Context, params peregrine.OIDCA
 
 	launchID, err := s.validateState(params.State)
 	if err != nil {
-		return resp, err
+		return resp, fmt.Errorf("failed to validate state: %v", err)
 	}
 
 	resp.Launch, err = s.dataSvc.GetLaunch(ctx, launchID)
@@ -113,7 +113,7 @@ func (s *Service) HandleOidcCallback(ctx context.Context, params peregrine.OIDCA
 
 	resp.Claims, err = s.parseIDToken(ctx, resp.Launch, params.IDToken)
 	if err != nil {
-		return resp, err
+		return resp, fmt.Errorf("failed to parse id_token: %v", err)
 	}
 
 	return resp, nil
