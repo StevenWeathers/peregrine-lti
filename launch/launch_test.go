@@ -30,8 +30,14 @@ var testStoreSvc *mockStoreSvc
 func TestMain(m *testing.M) {
 	// Setup a mock JWK keyset and server
 	key, _ := jwk.FromRaw([]byte("godofthunder"))
-	key.Set("kid", "testkey")
-	key.Set("alg", "HS256")
+	err := key.Set("kid", "testkey")
+	if err != nil {
+		panic(err)
+	}
+	err = key.Set("alg", "HS256")
+	if err != nil {
+		panic(err)
+	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		type response struct {
@@ -49,7 +55,10 @@ func TestMain(m *testing.M) {
 		}
 		ks, _ := json.Marshal(resp)
 		w.Header().Set("Content-Type", "application/jwk-set+json")
-		w.Write(ks)
+		_, err = w.Write(ks)
+		if err != nil {
+			panic(err)
+		}
 	}))
 
 	testStoreSvc = &mockStoreSvc{
@@ -66,6 +75,7 @@ func TestMain(m *testing.M) {
 	}
 
 	exitVal := m.Run()
+	srv.Close()
 	os.Exit(exitVal)
 }
 
