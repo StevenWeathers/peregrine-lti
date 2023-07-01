@@ -21,7 +21,7 @@ func (s *Service) getPlatformJWKs(ctx context.Context, jwkURL string) (jwk.Set, 
 	if !s.jwkCache.IsRegistered(jwkURL) {
 		_ = s.jwkCache.Register(jwkURL)
 		if _, err := s.jwkCache.Refresh(ctx, jwkURL); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to refresh platform keyset %v", err)
 		}
 	}
 	return s.jwkCache.Get(ctx, jwkURL)
@@ -38,17 +38,17 @@ func (s *Service) createLaunchState(launchID uuid.UUID) (string, error) {
 		Claim(launchIDClaim, launchID.String()).
 		Build()
 	if err != nil {
-		return state, err
+		return state, fmt.Errorf("failed to create launch %s state jwt: %v", launchID, err)
 	}
 
 	key, err := jwk.FromRaw([]byte(s.config.JWTKeySecret))
 	if err != nil {
-		return state, err
+		return state, fmt.Errorf("failed to create launch %s state jwk from configured secret: %v", launchID, err)
 	}
 
 	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, key))
 	if err != nil {
-		return state, err
+		return state, fmt.Errorf("failed to sign launch %s state jwt: %v", launchID, err)
 	}
 
 	state = string(signed)

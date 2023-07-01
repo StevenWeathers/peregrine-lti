@@ -97,12 +97,12 @@ type Launch struct {
 
 // ToolDataRepo is intended to be a storage (e.g. DB) service for an LTI Tools registration and launch
 type ToolDataRepo interface {
-	// GetPlatformInstanceByGUID should return a PlatformInstance by GUID
-	GetPlatformInstanceByGUID(ctx context.Context, guid string) (PlatformInstance, error)
+	// UpsertPlatformInstanceByGUID should create a PlatformInstance if not existing returning PlatformInstance with ID
+	UpsertPlatformInstanceByGUID(ctx context.Context, instance PlatformInstance) (PlatformInstance, error)
 	// GetRegistrationByClientID should return a Registration by ClientID
 	GetRegistrationByClientID(ctx context.Context, clientId string) (Registration, error)
-	// GetDeploymentByPlatformDeploymentID should return a Deployment by PlatformDeploymentID
-	GetDeploymentByPlatformDeploymentID(ctx context.Context, deploymentId string) (Deployment, error)
+	// UpsertDeploymentByPlatformDeploymentID should create a Deployment if not existing returning a Deployment with ID
+	UpsertDeploymentByPlatformDeploymentID(ctx context.Context, deployment Deployment) (Deployment, error)
 	// GetLaunch should return a Launch by ID
 	GetLaunch(ctx context.Context, id uuid.UUID) (Launch, error)
 	// CreateLaunch should create a Launch returning Launch with ID and Nonce
