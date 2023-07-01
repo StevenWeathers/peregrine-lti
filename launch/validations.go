@@ -40,7 +40,7 @@ func (s *Service) validateState(state string) (uuid.UUID, error) {
 
 	key, err := jwk.FromRaw([]byte(s.config.JWTKeySecret))
 	if err != nil {
-		return launchID, err
+		return launchID, fmt.Errorf("failed to create JWK key with configured secret: %v", err)
 	}
 
 	verifiedToken, err := jwt.Parse([]byte(state), jwt.WithKey(jwa.HS256, key))
@@ -98,8 +98,6 @@ func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idT
 	}
 	lti1p3Claims.SUB = verifiedToken.Subject()
 
-	// @TODO - how to handle azp?
-
 	if lti1p3Claims.SUB != "" && (len(lti1p3Claims.SUB) > 255) {
 		return lti1p3Claims, fmt.Errorf("sub %s in id_token exceeds 255 characters", lti1p3Claims.SUB)
 	}
@@ -110,11 +108,16 @@ func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idT
 			"launch deployment_id %s does not match id_token deployment_id %s",
 			launch.Deployment.ID.String(), lti1p3Claims.DeploymentID,
 		)
-	} else {
-		deployment, err := s.dataSvc.GetDeploymentByPlatformDeploymentID(ctx, lti1p3Claims.DeploymentID)
+	} else if lti1p3Claims.DeploymentID != "" {
+		deployment, err := s.dataSvc.UpsertDeploymentByPlatformDeploymentID(ctx, peregrine.Deployment{
+			Registration: &peregrine.Registration{
+				ID: launch.Registration.ID,
+			},
+			PlatformDeploymentID: lti1p3Claims.DeploymentID,
+		})
 		if err != nil {
 			return lti1p3Claims, fmt.Errorf(
-				"lms deployment_id %s not found in tool lti data source",
+				"failed to upsert lms deployment_id %s",
 				lti1p3Claims.DeploymentID,
 			)
 		}
@@ -123,18 +126,30 @@ func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idT
 
 	// The peregrine.PlatformInstance is purely for audit purposes and not actually meant to be pre-configured by tool
 	if lti1p3Claims.ToolPlatform.GUID != "" {
-		// @TODO - handle if instance not in DB insert it
-		platformInstance, _ := s.dataSvc.GetPlatformInstanceByGUID(ctx, lti1p3Claims.ToolPlatform.GUID)
-		if err == nil {
-			launch.PlatformInstance = &platformInstance
+		platformInstance, err := s.dataSvc.UpsertPlatformInstanceByGUID(ctx, peregrine.PlatformInstance{
+			GUID: lti1p3Claims.ToolPlatform.GUID,
+			Platform: &peregrine.Platform{
+				ID: launch.Registration.Platform.ID,
+			},
+			ContactEmail:      lti1p3Claims.ToolPlatform.ContactEmail,
+			Description:       lti1p3Claims.ToolPlatform.Description,
+			Name:              lti1p3Claims.ToolPlatform.Name,
+			URL:               lti1p3Claims.ToolPlatform.URL,
+			ProductFamilyCode: lti1p3Claims.ToolPlatform.ProductFamilyCode,
+			Version:           lti1p3Claims.ToolPlatform.Version,
+		})
+		if err != nil {
+			return lti1p3Claims, fmt.Errorf(
+				"failed to upsert PlatformInstance by guid %s: %v", lti1p3Claims.ToolPlatform.GUID, err)
 		}
+		launch.PlatformInstance = &platformInstance
 	}
 
 	used := time.Now()
 	launch.Used = &used
 	_, err = s.dataSvc.UpdateLaunch(ctx, launch)
 	if err != nil {
-		return lti1p3Claims, err
+		return lti1p3Claims, fmt.Errorf("failed to update launch %s: %v", launch.ID, err)
 	}
 
 	return lti1p3Claims, nil

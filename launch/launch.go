@@ -45,7 +45,7 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 
 	registration, err := s.dataSvc.GetRegistrationByClientID(ctx, params.ClientID)
 	if err != nil {
-		return resp, err
+		return resp, fmt.Errorf("failed to get registration by client id %s: %v", params.ClientID, err)
 	}
 	resp.RedirectURL = registration.Platform.AuthLoginURL
 
@@ -57,11 +57,15 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 	}
 
 	if params.LTIDeploymentID != "" {
-		dep, err := s.dataSvc.GetDeploymentByPlatformDeploymentID(ctx, params.LTIDeploymentID)
+		dep, err := s.dataSvc.UpsertDeploymentByPlatformDeploymentID(ctx, peregrine.Deployment{
+			Registration: &peregrine.Registration{
+				ID: registration.ID,
+			},
+			PlatformDeploymentID: params.LTIDeploymentID,
+		})
 		if err != nil {
 			return resp, fmt.Errorf(
-				"lms deployment_id %s not found in tool lti data source",
-				params.LTIDeploymentID,
+				"failed to upsert deployment %s: %v", params.LTIDeploymentID, err,
 			)
 		}
 		deployment = &dep
@@ -72,7 +76,7 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 		Deployment:   deployment,
 	})
 	if err != nil {
-		return resp, err
+		return resp, fmt.Errorf("failed to create launch: %v", err)
 	}
 	resp.OIDCLoginResponseParams.Nonce = launch.Nonce.String()
 
@@ -104,7 +108,7 @@ func (s *Service) HandleOidcCallback(ctx context.Context, params peregrine.OIDCA
 
 	resp.Launch, err = s.dataSvc.GetLaunch(ctx, launchID)
 	if err != nil {
-		return resp, err
+		return resp, fmt.Errorf("failed to get launch %s: %v", launchID, err)
 	}
 
 	resp.Claims, err = s.parseIDToken(ctx, resp.Launch, params.IDToken)
