@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -12,18 +13,34 @@ type LaunchDataService struct {
 	DB *pgx.Conn
 }
 
-// GetPlatformInstanceByGUID should return a PlatformInstance by GUID
-func (s *LaunchDataService) GetPlatformInstanceByGUID(ctx context.Context, guid string) (peregrine.PlatformInstance, error) {
+// UpsertPlatformInstanceByGUID should create a PlatformInstance if not existing returning PlatformInstance with ID
+func (s *LaunchDataService) UpsertPlatformInstanceByGUID(
+	ctx context.Context, instance peregrine.PlatformInstance,
+) (peregrine.PlatformInstance, error) {
 	platIns := peregrine.PlatformInstance{}
 
 	err := s.DB.QueryRow(ctx,
 		`SELECT pi.id, pi.guid
 			FROM peregrine.platform_instance pi 
 			WHERE pi.guid = $1`,
-		guid,
+		instance.GUID,
 	).Scan(
 		&platIns.ID, &platIns.GUID,
 	)
+	if err != nil && err == sql.ErrNoRows {
+		err := s.DB.QueryRow(ctx,
+			`INSERT INTO peregrine.platform_instance 
+				(guid, platform_id, contact_email, description, name, url, product_family_code, version)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+			instance.GUID, instance.Platform.ID, instance.ContactEmail, instance.Description,
+			instance.Name, instance.URL, instance.ProductFamilyCode, instance.Version,
+		).Scan(&platIns.ID)
+		if err != nil {
+			return platIns, err
+		}
+	} else if err != nil {
+		return platIns, err
+	}
 
 	return platIns, err
 }
@@ -48,8 +65,10 @@ func (s *LaunchDataService) GetRegistrationByClientID(ctx context.Context, clien
 	return reg, err
 }
 
-// GetDeploymentByPlatformDeploymentID should return a Deployment by PlatformDeploymentID
-func (s *LaunchDataService) GetDeploymentByPlatformDeploymentID(ctx context.Context, deploymentId string) (peregrine.Deployment, error) {
+// UpsertDeploymentByPlatformDeploymentID should create a Deployment if not existing returning a Deployment with ID
+func (s *LaunchDataService) UpsertDeploymentByPlatformDeploymentID(
+	ctx context.Context, deployment peregrine.Deployment,
+) (peregrine.Deployment, error) {
 	dep := peregrine.Deployment{
 		Registration: &peregrine.Registration{
 			Platform: &peregrine.Platform{},
@@ -62,11 +81,24 @@ func (s *LaunchDataService) GetDeploymentByPlatformDeploymentID(ctx context.Cont
 			JOIN peregrine.registration r ON d.registration_id = r.id
 			JOIN peregrine.platform p ON r.platform_id = p.id
 			WHERE d.platform_deployment_id = $1`,
-		deploymentId,
+		deployment.ID,
 	).Scan(
 		&dep.ID, &dep.PlatformDeploymentID, &dep.Registration.ID,
 		&dep.Registration.Platform.ID, &dep.Registration.Platform.KeySetURL,
 	)
+	if err != nil && err == sql.ErrNoRows {
+		err := s.DB.QueryRow(ctx,
+			`INSERT INTO peregrine.deployment 
+				(registration_id, platform_deployment_id)
+				VALUES ($1, $2) RETURNING id`,
+			&deployment.Registration.ID, &deployment.PlatformDeploymentID,
+		).Scan(&dep.ID)
+		if err != nil {
+			return dep, err
+		}
+	} else if err != nil {
+		return dep, err
+	}
 
 	return dep, err
 }
