@@ -3,6 +3,7 @@ package launch
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -235,6 +236,63 @@ func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
 	}
 }
 
+func TestHandleOidcLoginInvalidParams(t *testing.T) {
+	launchSvc := New(Config{
+		JWTKeySecret: "bringmemoreale!",
+		Issuer:       happyPathIssuer,
+	}, testStoreSvc)
+
+	_, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
+		Issuer:          canvasTestIssuer,
+		LoginHint:       "32",
+		TargetLinkURI:   happyPathTargetLinkURI,
+		ClientID:        "",
+		LTIMessageHint:  "",
+		LTIDeploymentID: "",
+	})
+	if err.Error() != "failed to validate login request params: MISSING_CLIENT_ID" {
+		t.Fatalf("expected invalid params: %v", err)
+	}
+}
+
+func TestHandleOidcLoginClientIDNotFound(t *testing.T) {
+	launchSvc := New(Config{
+		JWTKeySecret: "bringmemoreale!",
+		Issuer:       happyPathIssuer,
+	}, testStoreSvc)
+
+	_, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
+		Issuer:          canvasTestIssuer,
+		LoginHint:       "32",
+		TargetLinkURI:   happyPathTargetLinkURI,
+		ClientID:        "unknown",
+		LTIMessageHint:  "",
+		LTIDeploymentID: "",
+	})
+	if err.Error() != "failed to get registration by client id unknown: REGISTRATION_NOT_FOUND" {
+		t.Fatalf("expected invalid params: %v", err)
+	}
+}
+
+func TestHandleOidcLoginIncorrectIssuer(t *testing.T) {
+	launchSvc := New(Config{
+		JWTKeySecret: "bringmemoreale!",
+		Issuer:       happyPathIssuer,
+	}, testStoreSvc)
+
+	_, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
+		Issuer:          "https://canvas.instructure.com",
+		LoginHint:       "32",
+		TargetLinkURI:   happyPathTargetLinkURI,
+		ClientID:        happyPathClientID,
+		LTIMessageHint:  "",
+		LTIDeploymentID: "",
+	})
+	if err.Error() != "request issuer https://canvas.instructure.com does not match registration issuer https://canvas.test.instructure.com" {
+		t.Fatalf("expected invalid params: %v", err)
+	}
+}
+
 func TestHandleOidcCallbackHappyPath(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: "bringmemoreale!",
@@ -393,6 +451,8 @@ func (s *mockStoreSvc) GetRegistrationByClientID(ctx context.Context, clientId s
 		reg.ID = happyPathRegistrationID
 		reg.ClientID = clientId
 		reg.Platform = &happyPathPlatform
+	} else {
+		return reg, fmt.Errorf("REGISTRATION_NOT_FOUND")
 	}
 	return reg, nil
 }
