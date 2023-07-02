@@ -101,10 +101,10 @@ func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idT
 	}
 
 	// validate deployment_id exists and if launch had deployment_id that it matches
-	if launch.Deployment != nil && lti1p3Claims.DeploymentID != launch.Deployment.ID.String() {
+	if launch.Deployment != nil && lti1p3Claims.DeploymentID != launch.Deployment.PlatformDeploymentID {
 		return lti1p3Claims, fmt.Errorf(
-			"launch deployment_id %s does not match id_token deployment_id %s",
-			launch.Deployment.ID.String(), lti1p3Claims.DeploymentID,
+			"launch platform_deployment_id %s does not match id_token deployment_id %s",
+			launch.Deployment.PlatformDeploymentID, lti1p3Claims.DeploymentID,
 		)
 	}
 
