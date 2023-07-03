@@ -17,7 +17,7 @@ var backendUrl string
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	params, err := launchSvc.GetLoginParamsFromRequestFormValues(r)
+	params, err := launch.GetLoginParamsFromRequestFormValues(r)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusUnauthorized)
@@ -33,7 +33,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	callbackUrl := fmt.Sprintf("%s/lti/callback", backendUrl)
 
-	redirURL, err := launchSvc.BuildLoginResponseRedirectURL(response.OIDCLoginResponseParams, response.RedirectURL, callbackUrl)
+	redirURL, err := launch.BuildLoginResponseRedirectURL(response.OIDCLoginResponseParams, response.RedirectURL, callbackUrl)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusUnauthorized)
@@ -46,13 +46,13 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 func handleCallback(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	params, err := launchSvc.GetCallbackParamsFromRequestFormValues(r)
+	params, err := launch.GetCallbackParamsFromRequestFormValues(r)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	
+
 	_, err = launchSvc.HandleOidcCallback(ctx, params)
 	if err != nil {
 		log.Println(err)
