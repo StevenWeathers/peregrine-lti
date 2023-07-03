@@ -118,4 +118,4 @@ Please read [Contributing guide](CONTRIBUTING.md) for details on our code of con
 
 [![APACHE2 License](https://img.shields.io/github/license/StevenWeathers/peregrine-lti)](LICENSE)
 
-> *Learning Tools Interoperability® (LTI®) is a trademark of the IMS Global Learning Consortium, Inc. (https://www.imsglobal.org)*
+> *Learning Tools Interoperability® (LTI®) is a trademark of the 1EdTech Consortium Inc. (https://www.1edtech.org)*
