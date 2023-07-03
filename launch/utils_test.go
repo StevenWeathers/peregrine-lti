@@ -50,6 +50,13 @@ func TestCreateLaunchState(t *testing.T) {
 	}
 }
 
+func TestCreateLaunchStateEmptyJWTSecret(t *testing.T) {
+	_, err := createLaunchState(happyPathIssuer, "", happyPathLaunchID)
+	if err == nil || !strings.Contains(err.Error(), "failed to create launch 5daca535-415c-4bfe-8a0e-a7fba8f5d1eb state jwk from configured secret") {
+		t.Fatalf("expected error: %v", err)
+	}
+}
+
 func TestGetLoginParamsFromRequestFormValues(t *testing.T) {
 	urlValues := url.Values{}
 	urlValues.Add("iss", "test_iss")
