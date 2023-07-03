@@ -23,14 +23,15 @@ Technically the launch flow is feature complete, that is it handles all the requ
 
 That being said, this library is in active use so it has been tested and is not just a proof of concept.
 
-## Example Use
+## Getting Started
 
-### Download library
+### Installation
+
 ```bash
 go get github.com/stevenweathers/peregrine-lti
 ```
 
-### Setup login and callback endpoints
+### Usage
 ```go
 package main
 
@@ -101,3 +102,11 @@ func main() {
 	}
 }
 ```
+
+## Contributing
+
+Please see [Contributing guide](CONTRIBUTING.md)
+
+## License
+
+[Apache 2.0](LICENSE)
