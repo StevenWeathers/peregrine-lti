@@ -4,20 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 	"github.com/stevenweathers/peregrine-lti/peregrine"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"testing"
-	"time"
 )
 
-var ltiVersion = "1.3.0"
-var ltiClaimMessageType = "LtiResourceLinkRequest"
 var canvasTestIssuer = "https://canvas.test.instructure.com"
 var canvasTestJWKURL = "/canvaslms/api/lti/security/jwks"
 var canvasTestLoginUrl = "/canvaslms/api/lti/authorize_redirect"
@@ -35,11 +35,13 @@ var happyPathNonce = uuid.MustParse("1ff74ccf-8d02-45c0-a881-98f4bf52298f")
 var happyPathPlatformInstanceID = uuid.MustParse("52166f98-f932-4ccf-ae71-e0ae10255e4f")
 var happyPathRegistrationID = uuid.MustParse("7b556115-9460-4f1e-835e-cb11a7301f7d")
 var happyPathLaunchWithDeploymentID = uuid.MustParse("65ec0a8c-48e2-423b-b6e0-d1143292d550")
+var testJWTSecret = "godofthunder"
 var testStoreSvc *mockStoreSvc
+var srvUrl string
 
 func TestMain(m *testing.M) {
 	// Setup a mock JWK keyset and server
-	key, _ := jwk.FromRaw([]byte("godofthunder"))
+	key, _ := jwk.FromRaw([]byte(testJWTSecret))
 	err := key.Set("kid", "testkey")
 	if err != nil {
 		panic(err)
@@ -50,6 +52,10 @@ func TestMain(m *testing.M) {
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.String() != "/canvaslms/api/lti/security/jwks" {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		type response struct {
 			Keys []jwk.Key `json:"keys"`
 		}
@@ -77,6 +83,7 @@ func TestMain(m *testing.M) {
 		server:       srv,
 	}
 
+	srvUrl = srv.URL
 	happyPathPlatform = peregrine.Platform{
 		ID:           happyPathPlatformID,
 		Issuer:       canvasTestIssuer,
@@ -91,7 +98,7 @@ func TestMain(m *testing.M) {
 
 func TestHandleOidcLoginHappyPath(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -129,7 +136,7 @@ func TestHandleOidcLoginHappyPath(t *testing.T) {
 		t.Fatalf("expected OIDCLoginResponseParams.LTIMessageHint to be empty string")
 	}
 
-	launchID, err := launchSvc.validateState(resp.OIDCLoginResponseParams.State)
+	launchID, err := validateState(launchSvc.config.JWTKeySecret, resp.OIDCLoginResponseParams.State)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +147,7 @@ func TestHandleOidcLoginHappyPath(t *testing.T) {
 
 func TestHandleOidcLoginHappyPathWithLTIMessageHint(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -178,7 +185,7 @@ func TestHandleOidcLoginHappyPathWithLTIMessageHint(t *testing.T) {
 		t.Fatalf("expected OIDCLoginResponseParams.LTIMessageHint to be 42")
 	}
 
-	launchID, err := launchSvc.validateState(resp.OIDCLoginResponseParams.State)
+	launchID, err := validateState(launchSvc.config.JWTKeySecret, resp.OIDCLoginResponseParams.State)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +196,7 @@ func TestHandleOidcLoginHappyPathWithLTIMessageHint(t *testing.T) {
 
 func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -227,7 +234,7 @@ func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
 		t.Fatalf("expected OIDCLoginResponseParams.LTIMessageHint to be empty string")
 	}
 
-	launchID, err := launchSvc.validateState(resp.OIDCLoginResponseParams.State)
+	launchID, err := validateState(launchSvc.config.JWTKeySecret, resp.OIDCLoginResponseParams.State)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +245,7 @@ func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
 
 func TestHandleOidcLoginInvalidParams(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -257,7 +264,7 @@ func TestHandleOidcLoginInvalidParams(t *testing.T) {
 
 func TestHandleOidcLoginClientIDNotFound(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -276,7 +283,7 @@ func TestHandleOidcLoginClientIDNotFound(t *testing.T) {
 
 func TestHandleOidcLoginIncorrectIssuer(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -295,11 +302,11 @@ func TestHandleOidcLoginIncorrectIssuer(t *testing.T) {
 
 func TestHandleOidcCallbackHappyPath(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
-	state, err := launchSvc.createLaunchState(happyPathLaunchID)
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -311,11 +318,11 @@ func TestHandleOidcCallbackHappyPath(t *testing.T) {
 		Audience([]string{happyPathClientID}).
 		Subject(happyPathSubClaim).
 		Expiration(time.Now().Add(time.Minute*10)).
-		Claim("nonce", happyPathNonce.String()).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/message_type", ltiClaimMessageType).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/version", ltiVersion).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/target_link_uri", happyPathTargetLinkURI).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/deployment_id", happyPathPlatformDeploymentID).
+		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
+		Claim(ltiVersionClaim, ltiVersionClaimValue).
+		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, happyPathPlatformDeploymentID).
 		Build()
 	if err != nil {
 		panic(err)
@@ -340,11 +347,11 @@ func TestHandleOidcCallbackHappyPath(t *testing.T) {
 
 func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
-	state, err := launchSvc.createLaunchState(happyPathLaunchWithDeploymentID)
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchWithDeploymentID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,11 +363,11 @@ func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
 		Audience([]string{happyPathClientID}).
 		Subject(happyPathSubClaim).
 		Expiration(time.Now().Add(time.Minute*10)).
-		Claim("nonce", happyPathNonce.String()).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/message_type", ltiClaimMessageType).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/version", ltiVersion).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/target_link_uri", happyPathTargetLinkURI).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/deployment_id", happyPathPlatformDeploymentID).
+		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
+		Claim(ltiVersionClaim, ltiVersionClaimValue).
+		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, happyPathPlatformDeploymentID).
 		Build()
 	if err != nil {
 		panic(err)
@@ -385,11 +392,11 @@ func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
 
 func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
-	state, err := launchSvc.createLaunchState(happyPathLaunchID)
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -401,11 +408,11 @@ func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
 		Audience([]string{happyPathClientID}).
 		Subject(happyPathSubClaim).
 		Expiration(time.Now().Add(time.Minute*10)).
-		Claim("nonce", happyPathNonce.String()).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/message_type", ltiClaimMessageType).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/version", ltiVersion).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/target_link_uri", happyPathTargetLinkURI).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/deployment_id", happyPathPlatformDeploymentID).
+		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
+		Claim(ltiVersionClaim, ltiVersionClaimValue).
+		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, happyPathPlatformDeploymentID).
 		Claim("https://purl.imsglobal.org/spec/lti/claim/tool_platform", peregrine.PlatformInstanceClaim{
 			GUID: happyPathPlatformInstanceGUID,
 		}).
@@ -428,6 +435,82 @@ func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
 
 	if res.Launch.Used == nil {
 		t.Fatal("expected Launch.Used to not be nil")
+	}
+}
+
+func TestHandleOidcCallbackInvalidState(t *testing.T) {
+	launchSvc := New(Config{
+		JWTKeySecret: testJWTSecret,
+		Issuer:       happyPathIssuer,
+	}, testStoreSvc)
+
+	_, err := launchSvc.HandleOidcCallback(context.Background(), peregrine.OIDCAuthenticationResponse{
+		State:   "",
+		IDToken: "",
+	})
+	if err == nil || !strings.Contains(err.Error(), "failed to validate state:") {
+		t.Fatalf("expected error %v", err)
+	}
+}
+
+func TestHandleOidcCallbackInvalidIDToken(t *testing.T) {
+	launchSvc := New(Config{
+		JWTKeySecret: testJWTSecret,
+		Issuer:       happyPathIssuer,
+	}, testStoreSvc)
+
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = launchSvc.HandleOidcCallback(context.Background(), peregrine.OIDCAuthenticationResponse{
+		State:   state,
+		IDToken: "",
+	})
+	if err == nil || !strings.Contains(err.Error(), "invalid id_token:") {
+		t.Fatalf("expected error %v", err)
+	}
+}
+
+func TestHandleOidcCallbackLaunchIDNotFound(t *testing.T) {
+	launchSvc := New(Config{
+		JWTKeySecret: testJWTSecret,
+		Issuer:       happyPathIssuer,
+	}, testStoreSvc)
+
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathDeploymentID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a mock id_token
+	tok, err := jwt.NewBuilder().
+		Issuer(canvasTestIssuer).
+		IssuedAt(time.Now()).
+		Audience([]string{happyPathClientID}).
+		Subject(happyPathSubClaim).
+		Expiration(time.Now().Add(time.Minute*10)).
+		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
+		Claim(ltiVersionClaim, ltiVersionClaimValue).
+		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, happyPathPlatformDeploymentID).
+		Build()
+	if err != nil {
+		panic(err)
+	}
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = launchSvc.HandleOidcCallback(context.Background(), peregrine.OIDCAuthenticationResponse{
+		State:   state,
+		IDToken: string(signedIdToken),
+	})
+	if err == nil || !strings.Contains(err.Error(), "failed to get launch 8024616d-312b-4249-8880-0ecd89e8b909: LAUNCH_NOT_FOUND") {
+		t.Fatalf("expected error: %v", err)
 	}
 }
 
@@ -486,6 +569,8 @@ func (s *mockStoreSvc) GetLaunch(ctx context.Context, id uuid.UUID) (peregrine.L
 			ID:                   happyPathDeploymentID,
 			PlatformDeploymentID: happyPathPlatformDeploymentID,
 		}
+	} else {
+		return l, fmt.Errorf("LAUNCH_NOT_FOUND")
 	}
 	return l, nil
 }
