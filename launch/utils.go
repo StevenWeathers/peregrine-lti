@@ -17,22 +17,22 @@ import (
 
 // getPlatformJWKs retrieves the platforms jwk key set used to parse the oidc id_token jwt
 // caching the jwk key set in memory to improve performance
-func (s *Service) getPlatformJWKs(ctx context.Context, jwkURL string) (jwk.Set, error) {
-	if !s.jwkCache.IsRegistered(jwkURL) {
-		_ = s.jwkCache.Register(jwkURL)
-		if _, err := s.jwkCache.Refresh(ctx, jwkURL); err != nil {
+func getPlatformJWKs(ctx context.Context, jwkCache *jwk.Cache, jwkURL string) (jwk.Set, error) {
+	if !jwkCache.IsRegistered(jwkURL) {
+		_ = jwkCache.Register(jwkURL)
+		if _, err := jwkCache.Refresh(ctx, jwkURL); err != nil {
 			return nil, fmt.Errorf("failed to refresh platform keyset %v", err)
 		}
 	}
-	return s.jwkCache.Get(ctx, jwkURL)
+	return jwkCache.Get(ctx, jwkURL)
 }
 
 // createLaunchState builds a jwt to act as the state value for the oidc login flow returning jwt as a string
-func (s *Service) createLaunchState(launchID uuid.UUID) (string, error) {
+func createLaunchState(issuer string, jwtKeySecret string, launchID uuid.UUID) (string, error) {
 	var state string
 	// Build a JWT!
 	tok, err := jwt.NewBuilder().
-		Issuer(s.config.Issuer).
+		Issuer(issuer).
 		IssuedAt(time.Now()).
 		Expiration(time.Now().Add(time.Minute*10)).
 		Claim(launchIDClaim, launchID.String()).
@@ -41,7 +41,7 @@ func (s *Service) createLaunchState(launchID uuid.UUID) (string, error) {
 		return state, fmt.Errorf("failed to create launch %s state jwt: %v", launchID, err)
 	}
 
-	key, err := jwk.FromRaw([]byte(s.config.JWTKeySecret))
+	key, err := jwk.FromRaw([]byte(jwtKeySecret))
 	if err != nil {
 		return state, fmt.Errorf("failed to create launch %s state jwk from configured secret: %v", launchID, err)
 	}

@@ -81,7 +81,7 @@ func (s *Service) HandleOidcLogin(ctx context.Context, params peregrine.OIDCLogi
 	}
 	resp.OIDCLoginResponseParams.Nonce = launch.Nonce.String()
 
-	state, err := s.createLaunchState(launch.ID)
+	state, err := createLaunchState(s.config.Issuer, s.config.JWTKeySecret, launch.ID)
 	if err != nil {
 		return resp, fmt.Errorf("failed to create launch state: %v", err)
 	}
@@ -102,7 +102,7 @@ func (s *Service) HandleOidcCallback(ctx context.Context, params peregrine.OIDCA
 		Launch: peregrine.Launch{},
 	}
 
-	launchID, err := s.validateState(params.State)
+	launchID, err := validateState(s.config.JWTKeySecret, params.State)
 	if err != nil {
 		return resp, fmt.Errorf("failed to validate state: %v", err)
 	}
@@ -112,7 +112,7 @@ func (s *Service) HandleOidcCallback(ctx context.Context, params peregrine.OIDCA
 		return resp, fmt.Errorf("failed to get launch %s: %v", launchID, err)
 	}
 
-	resp.Claims, err = s.parseIDToken(ctx, resp.Launch, params.IDToken)
+	resp.Claims, err = parseIDToken(ctx, s.jwkCache, resp.Launch, params.IDToken)
 	if err != nil {
 		return resp, fmt.Errorf("failed to parse id_token: %v", err)
 	}

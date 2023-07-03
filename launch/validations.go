@@ -33,10 +33,10 @@ func validateLoginRequestParams(params peregrine.OIDCLoginRequestParams) error {
 }
 
 // validateState parses the jwt with the configured key and returns the Launch.ID from the jwt claims
-func (s *Service) validateState(state string) (uuid.UUID, error) {
+func validateState(jwtKeySecret string, state string) (uuid.UUID, error) {
 	launchID := uuid.New()
 
-	key, err := jwk.FromRaw([]byte(s.config.JWTKeySecret))
+	key, err := jwk.FromRaw([]byte(jwtKeySecret))
 	if err != nil {
 		return launchID, fmt.Errorf("failed to create JWK key with configured secret: %v", err)
 	}
@@ -59,11 +59,11 @@ func (s *Service) validateState(state string) (uuid.UUID, error) {
 }
 
 // parseIDToken validates the id_token jwt with the peregrine.Platform key set returning peregrine.LTI1p3Claims
-func (s *Service) parseIDToken(ctx context.Context, launch peregrine.Launch, idToken string) (peregrine.LTI1p3Claims, error) {
+func parseIDToken(ctx context.Context, jwkCache *jwk.Cache, launch peregrine.Launch, idToken string) (peregrine.LTI1p3Claims, error) {
 	var lti1p3Claims peregrine.LTI1p3Claims
 	keysetUrl := launch.Registration.Platform.KeySetURL
 
-	keySet, err := s.getPlatformJWKs(ctx, keysetUrl)
+	keySet, err := getPlatformJWKs(ctx, jwkCache, keysetUrl)
 	if err != nil {
 		return lti1p3Claims, fmt.Errorf("unable to retrieve %s keyset: %v", keysetUrl, err)
 	}

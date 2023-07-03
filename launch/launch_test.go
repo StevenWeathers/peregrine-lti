@@ -129,7 +129,7 @@ func TestHandleOidcLoginHappyPath(t *testing.T) {
 		t.Fatalf("expected OIDCLoginResponseParams.LTIMessageHint to be empty string")
 	}
 
-	launchID, err := launchSvc.validateState(resp.OIDCLoginResponseParams.State)
+	launchID, err := validateState(launchSvc.config.JWTKeySecret, resp.OIDCLoginResponseParams.State)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +178,7 @@ func TestHandleOidcLoginHappyPathWithLTIMessageHint(t *testing.T) {
 		t.Fatalf("expected OIDCLoginResponseParams.LTIMessageHint to be 42")
 	}
 
-	launchID, err := launchSvc.validateState(resp.OIDCLoginResponseParams.State)
+	launchID, err := validateState(launchSvc.config.JWTKeySecret, resp.OIDCLoginResponseParams.State)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +227,7 @@ func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
 		t.Fatalf("expected OIDCLoginResponseParams.LTIMessageHint to be empty string")
 	}
 
-	launchID, err := launchSvc.validateState(resp.OIDCLoginResponseParams.State)
+	launchID, err := validateState(launchSvc.config.JWTKeySecret, resp.OIDCLoginResponseParams.State)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +299,7 @@ func TestHandleOidcCallbackHappyPath(t *testing.T) {
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
-	state, err := launchSvc.createLaunchState(happyPathLaunchID)
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -344,7 +344,7 @@ func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
-	state, err := launchSvc.createLaunchState(happyPathLaunchWithDeploymentID)
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchWithDeploymentID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -389,7 +389,7 @@ func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
-	state, err := launchSvc.createLaunchState(happyPathLaunchID)
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchID)
 	if err != nil {
 		t.Fatal(err)
 	}
