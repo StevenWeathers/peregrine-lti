@@ -38,13 +38,18 @@ go get github.com/stevenweathers/peregrine-lti
 package main
 
 import (
+	"fmt"
+	"net/http"
 	"github.com/stevenweathers/peregrine-lti/launch"
 )
+
+var backendUrl = "https://yourbackendurl.com"
+var launchSvc *launch.Service
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	params, err := launchSvc.GetLoginParamsFromRequestFormValues(r)
+	params, err := launch.GetLoginParamsFromRequestFormValues(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -59,7 +64,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	// provide your tools endpoint url for the callback
 	callbackUrl := fmt.Sprintf("%s/lti/callback", backendUrl)
 
-	redirURL, err := launchSvc.BuildLoginResponseRedirectURL(response.OIDCLoginResponseParams, response.RedirectURL, callbackUrl)
+	redirURL, err := launch.BuildLoginResponseRedirectURL(response.OIDCLoginResponseParams, response.RedirectURL, callbackUrl)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -71,7 +76,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 func handleCallback(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	params, err := launchSvc.GetCallbackParamsFromRequestFormValues(r)
+	params, err := launch.GetCallbackParamsFromRequestFormValues(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -88,8 +93,8 @@ func handleCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	dataService := yourDataService{}
-	launchService := launch.New(launch.Config{
+	dataService := yourDataService{} // interface matching peregrine.ToolDataRepo
+	launchSvc = launch.New(launch.Config{
 		Issuer:       "yourIssuer", 
 		JWTKeySecret: "yourJWTSecretKey",
     }, &dataService)

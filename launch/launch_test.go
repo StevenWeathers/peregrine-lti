@@ -35,11 +35,13 @@ var happyPathNonce = uuid.MustParse("1ff74ccf-8d02-45c0-a881-98f4bf52298f")
 var happyPathPlatformInstanceID = uuid.MustParse("52166f98-f932-4ccf-ae71-e0ae10255e4f")
 var happyPathRegistrationID = uuid.MustParse("7b556115-9460-4f1e-835e-cb11a7301f7d")
 var happyPathLaunchWithDeploymentID = uuid.MustParse("65ec0a8c-48e2-423b-b6e0-d1143292d550")
+var testJWTSecret = "godofthunder"
 var testStoreSvc *mockStoreSvc
+var srvUrl string
 
 func TestMain(m *testing.M) {
 	// Setup a mock JWK keyset and server
-	key, _ := jwk.FromRaw([]byte("godofthunder"))
+	key, _ := jwk.FromRaw([]byte(testJWTSecret))
 	err := key.Set("kid", "testkey")
 	if err != nil {
 		panic(err)
@@ -50,6 +52,10 @@ func TestMain(m *testing.M) {
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.String() != "/canvaslms/api/lti/security/jwks" {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		type response struct {
 			Keys []jwk.Key `json:"keys"`
 		}
@@ -77,6 +83,7 @@ func TestMain(m *testing.M) {
 		server:       srv,
 	}
 
+	srvUrl = srv.URL
 	happyPathPlatform = peregrine.Platform{
 		ID:           happyPathPlatformID,
 		Issuer:       canvasTestIssuer,
@@ -91,7 +98,7 @@ func TestMain(m *testing.M) {
 
 func TestHandleOidcLoginHappyPath(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -140,7 +147,7 @@ func TestHandleOidcLoginHappyPath(t *testing.T) {
 
 func TestHandleOidcLoginHappyPathWithLTIMessageHint(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -189,7 +196,7 @@ func TestHandleOidcLoginHappyPathWithLTIMessageHint(t *testing.T) {
 
 func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -238,7 +245,7 @@ func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
 
 func TestHandleOidcLoginInvalidParams(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -257,7 +264,7 @@ func TestHandleOidcLoginInvalidParams(t *testing.T) {
 
 func TestHandleOidcLoginClientIDNotFound(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -276,7 +283,7 @@ func TestHandleOidcLoginClientIDNotFound(t *testing.T) {
 
 func TestHandleOidcLoginIncorrectIssuer(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -295,7 +302,7 @@ func TestHandleOidcLoginIncorrectIssuer(t *testing.T) {
 
 func TestHandleOidcCallbackHappyPath(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -340,7 +347,7 @@ func TestHandleOidcCallbackHappyPath(t *testing.T) {
 
 func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 
@@ -385,7 +392,7 @@ func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
 
 func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
 	launchSvc := New(Config{
-		JWTKeySecret: "bringmemoreale!",
+		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
 	}, testStoreSvc)
 

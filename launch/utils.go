@@ -58,7 +58,7 @@ func createLaunchState(issuer string, jwtKeySecret string, launchID uuid.UUID) (
 
 // GetLoginParamsFromRequestFormValues parses the *http.Request form values
 // // and populates peregrine.OIDCLoginRequestParams
-func (s *Service) GetLoginParamsFromRequestFormValues(r *http.Request) (peregrine.OIDCLoginRequestParams, error) {
+func GetLoginParamsFromRequestFormValues(r *http.Request) (peregrine.OIDCLoginRequestParams, error) {
 	resp := peregrine.OIDCLoginRequestParams{}
 	err := r.ParseForm()
 	if err != nil {
@@ -79,7 +79,7 @@ func (s *Service) GetLoginParamsFromRequestFormValues(r *http.Request) (peregrin
 
 // GetCallbackParamsFromRequestFormValues parses the *http.Request form values
 // and populates peregrine.OIDCAuthenticationResponse
-func (s *Service) GetCallbackParamsFromRequestFormValues(r *http.Request) (peregrine.OIDCAuthenticationResponse, error) {
+func GetCallbackParamsFromRequestFormValues(r *http.Request) (peregrine.OIDCAuthenticationResponse, error) {
 	resp := peregrine.OIDCAuthenticationResponse{}
 	err := r.ParseForm()
 	if err != nil {
@@ -95,7 +95,7 @@ func (s *Service) GetCallbackParamsFromRequestFormValues(r *http.Request) (pereg
 }
 
 // BuildLoginResponseRedirectURL generates a form_post url to redirect to the peregrine.Platform AuthLoginURL
-func (s *Service) BuildLoginResponseRedirectURL(
+func BuildLoginResponseRedirectURL(
 	response peregrine.OIDCLoginResponseParams, platformAuthLoginUrl, callbackUrl string,
 ) (string, error) {
 	var redirURL string
