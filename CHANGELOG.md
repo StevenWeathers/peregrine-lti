@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2023-07-02
+
+### Added
+- [Go Documentation](https://pkg.go.dev/github.com/stevenweathers/peregrine-lti) reference to [README](README.md) under Getting Started
+- Unit Tests for utility functions happy path
+
+### Moved
+- `GetLoginParamsFromRequestFormValues` from launch.Service public method to package public export
+- `GetCallbackParamsFromRequestFormValues` from launch.Service public method to package public export
+- `BuildLoginResponseRedirectURL` from launch.Service public method to package public export
+
+### Removed
+- Removed non-public utility and validation functions from launch Service struct
+
 ## [0.9.0] - 2023-07-02
 
 ### Added
