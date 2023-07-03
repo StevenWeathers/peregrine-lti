@@ -105,7 +105,7 @@ func main() {
 
 ## Contributing
 
-Please see [Contributing guide](CONTRIBUTING.md)
+Please read [Contributing guide](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
 
 ## License
 
