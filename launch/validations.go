@@ -14,7 +14,16 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwt"
 )
 
-const launchIDClaim = "lti_launch_id"
+const (
+	launchIDClaim            = "lti_launch_id"
+	ltiDeploymentIdClaim     = "https://purl.imsglobal.org/spec/lti/claim/deployment_id"
+	ltiMessageTypeClaim      = "https://purl.imsglobal.org/spec/lti/claim/message_type"
+	ltiMessageTypeClaimValue = "LtiResourceLinkRequest"
+	ltiVersionClaim          = "https://purl.imsglobal.org/spec/lti/claim/version"
+	ltiVersionClaimValue     = "1.3.0"
+	ltiTargetLinkUriClaim    = "https://purl.imsglobal.org/spec/lti/claim/target_link_uri"
+	nonceClaim               = "nonce"
+)
 
 func validateLoginRequestParams(params peregrine.OIDCLoginRequestParams) error {
 	if params.Issuer == "" {
@@ -75,11 +84,11 @@ func parseIDToken(ctx context.Context, jwkCache *jwk.Cache, launch peregrine.Lau
 	verifiedToken, err := jwt.Parse([]byte(idToken), jwt.WithKeySet(keySet),
 		jwt.WithIssuer(launch.Registration.Platform.Issuer),
 		jwt.WithAudience(launch.Registration.ClientID),
-		jwt.WithClaimValue("nonce", launch.Nonce.String()),
-		jwt.WithRequiredClaim("https://purl.imsglobal.org/spec/lti/claim/deployment_id"),
-		jwt.WithClaimValue("https://purl.imsglobal.org/spec/lti/claim/message_type", "LtiResourceLinkRequest"),
-		jwt.WithClaimValue("https://purl.imsglobal.org/spec/lti/claim/version", "1.3.0"),
-		jwt.WithRequiredClaim("https://purl.imsglobal.org/spec/lti/claim/target_link_uri"),
+		jwt.WithClaimValue(nonceClaim, launch.Nonce.String()),
+		jwt.WithRequiredClaim(ltiDeploymentIdClaim),
+		jwt.WithClaimValue(ltiMessageTypeClaim, ltiMessageTypeClaimValue),
+		jwt.WithClaimValue(ltiVersionClaim, ltiVersionClaimValue),
+		jwt.WithRequiredClaim(ltiTargetLinkUriClaim),
 	)
 	if err != nil {
 		return lti1p3Claims, fmt.Errorf("invalid id_token: %v", err)

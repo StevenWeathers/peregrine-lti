@@ -17,8 +17,6 @@ import (
 	"github.com/stevenweathers/peregrine-lti/peregrine"
 )
 
-var ltiVersion = "1.3.0"
-var ltiClaimMessageType = "LtiResourceLinkRequest"
 var canvasTestIssuer = "https://canvas.test.instructure.com"
 var canvasTestJWKURL = "/canvaslms/api/lti/security/jwks"
 var canvasTestLoginUrl = "/canvaslms/api/lti/authorize_redirect"
@@ -319,9 +317,9 @@ func TestHandleOidcCallbackHappyPath(t *testing.T) {
 		Audience([]string{happyPathClientID}).
 		Subject(happyPathSubClaim).
 		Expiration(time.Now().Add(time.Minute*10)).
-		Claim("nonce", happyPathNonce.String()).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/message_type", ltiClaimMessageType).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/version", ltiVersion).
+		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
+		Claim(ltiVersionClaim, ltiVersionClaimValue).
 		Claim("https://purl.imsglobal.org/spec/lti/claim/target_link_uri", happyPathTargetLinkURI).
 		Claim("https://purl.imsglobal.org/spec/lti/claim/deployment_id", happyPathPlatformDeploymentID).
 		Build()
@@ -364,11 +362,11 @@ func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
 		Audience([]string{happyPathClientID}).
 		Subject(happyPathSubClaim).
 		Expiration(time.Now().Add(time.Minute*10)).
-		Claim("nonce", happyPathNonce.String()).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/message_type", ltiClaimMessageType).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/version", ltiVersion).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/target_link_uri", happyPathTargetLinkURI).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/deployment_id", happyPathPlatformDeploymentID).
+		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
+		Claim(ltiVersionClaim, ltiVersionClaimValue).
+		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, happyPathPlatformDeploymentID).
 		Build()
 	if err != nil {
 		panic(err)
@@ -409,11 +407,11 @@ func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
 		Audience([]string{happyPathClientID}).
 		Subject(happyPathSubClaim).
 		Expiration(time.Now().Add(time.Minute*10)).
-		Claim("nonce", happyPathNonce.String()).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/message_type", ltiClaimMessageType).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/version", ltiVersion).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/target_link_uri", happyPathTargetLinkURI).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/deployment_id", happyPathPlatformDeploymentID).
+		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
+		Claim(ltiVersionClaim, ltiVersionClaimValue).
+		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, happyPathPlatformDeploymentID).
 		Claim("https://purl.imsglobal.org/spec/lti/claim/tool_platform", peregrine.PlatformInstanceClaim{
 			GUID: happyPathPlatformInstanceGUID,
 		}).
