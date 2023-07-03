@@ -25,6 +25,8 @@ That being said, this library is in active use so it has been tested and is not 
 
 ## Getting Started
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/StevenWeathers/peregrine-lti.svg)](https://pkg.go.dev/github.com/StevenWeathers/peregrine-lti)
+
 ### Installation
 
 ```bash
