@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -320,8 +321,8 @@ func TestHandleOidcCallbackHappyPath(t *testing.T) {
 		Claim(nonceClaim, happyPathNonce.String()).
 		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
 		Claim(ltiVersionClaim, ltiVersionClaimValue).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/target_link_uri", happyPathTargetLinkURI).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/deployment_id", happyPathPlatformDeploymentID).
+		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, happyPathPlatformDeploymentID).
 		Build()
 	if err != nil {
 		panic(err)
@@ -437,6 +438,82 @@ func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
 	}
 }
 
+func TestHandleOidcCallbackInvalidState(t *testing.T) {
+	launchSvc := New(Config{
+		JWTKeySecret: testJWTSecret,
+		Issuer:       happyPathIssuer,
+	}, testStoreSvc)
+
+	_, err := launchSvc.HandleOidcCallback(context.Background(), peregrine.OIDCAuthenticationResponse{
+		State:   "",
+		IDToken: "",
+	})
+	if err == nil || !strings.Contains(err.Error(), "failed to validate state:") {
+		t.Fatalf("expected error %v", err)
+	}
+}
+
+func TestHandleOidcCallbackInvalidIDToken(t *testing.T) {
+	launchSvc := New(Config{
+		JWTKeySecret: testJWTSecret,
+		Issuer:       happyPathIssuer,
+	}, testStoreSvc)
+
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = launchSvc.HandleOidcCallback(context.Background(), peregrine.OIDCAuthenticationResponse{
+		State:   state,
+		IDToken: "",
+	})
+	if err == nil || !strings.Contains(err.Error(), "invalid id_token:") {
+		t.Fatalf("expected error %v", err)
+	}
+}
+
+func TestHandleOidcCallbackLaunchIDNotFound(t *testing.T) {
+	launchSvc := New(Config{
+		JWTKeySecret: testJWTSecret,
+		Issuer:       happyPathIssuer,
+	}, testStoreSvc)
+
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathDeploymentID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a mock id_token
+	tok, err := jwt.NewBuilder().
+		Issuer(canvasTestIssuer).
+		IssuedAt(time.Now()).
+		Audience([]string{happyPathClientID}).
+		Subject(happyPathSubClaim).
+		Expiration(time.Now().Add(time.Minute*10)).
+		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
+		Claim(ltiVersionClaim, ltiVersionClaimValue).
+		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, happyPathPlatformDeploymentID).
+		Build()
+	if err != nil {
+		panic(err)
+	}
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = launchSvc.HandleOidcCallback(context.Background(), peregrine.OIDCAuthenticationResponse{
+		State:   state,
+		IDToken: string(signedIdToken),
+	})
+	if err == nil || !strings.Contains(err.Error(), "failed to get launch 8024616d-312b-4249-8880-0ecd89e8b909: LAUNCH_NOT_FOUND") {
+		t.Fatalf("expected error: %v", err)
+	}
+}
+
 // -- MOCKS --
 type mockStoreSvc struct {
 	idTokenKey   jwk.Key
@@ -492,6 +569,8 @@ func (s *mockStoreSvc) GetLaunch(ctx context.Context, id uuid.UUID) (peregrine.L
 			ID:                   happyPathDeploymentID,
 			PlatformDeploymentID: happyPathPlatformDeploymentID,
 		}
+	} else {
+		return l, fmt.Errorf("LAUNCH_NOT_FOUND")
 	}
 	return l, nil
 }
