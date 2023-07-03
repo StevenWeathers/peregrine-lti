@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jwk"
-	"github.com/lestrrat-go/jwx/v2/jwt"
-	"github.com/stevenweathers/peregrine-lti/peregrine"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/jwt"
+	"github.com/stevenweathers/peregrine-lti/peregrine"
 )
 
 var ltiVersion = "1.3.0"

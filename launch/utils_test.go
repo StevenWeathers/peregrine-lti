@@ -2,14 +2,16 @@ package launch
 
 import (
 	"context"
-	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jwk"
-	"github.com/lestrrat-go/jwx/v2/jwt"
-	"github.com/stevenweathers/peregrine-lti/peregrine"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk"
+	"github.com/lestrrat-go/jwx/v2/jwt"
+	"github.com/stevenweathers/peregrine-lti/peregrine"
 )
 
 func TestGetPlatformJWKs(t *testing.T) {
@@ -81,7 +83,25 @@ func TestGetLoginParamsFromRequestFormValues(t *testing.T) {
 	if params.LTIDeploymentID != "test_deployment_id" {
 		t.Fatalf("expected lti_deployment_id %s to equal test_deployment_id", params.LTIDeploymentID)
 	}
+}
 
+func TestGetLoginParamsFromRequestFormValuesBadFormRequest(t *testing.T) {
+	testBadFormRequest := &http.Request{
+		// ensures it reads the body
+		Method: "POST",
+		// string with bad url encoding '%3z'
+		Body: io.NopCloser(strings.NewReader("foo%3z1%26bar%3D2")),
+		// ensures it parses the body as post form
+		Header: map[string][]string{
+			"Content-Type": []string{
+				"application/x-www-form-urlencoded",
+			},
+		},
+	}
+	_, err := GetLoginParamsFromRequestFormValues(testBadFormRequest)
+	if err == nil || !strings.Contains(err.Error(), "failed to parse request formvalues:") {
+		t.Fatalf("expected error: %v", err)
+	}
 }
 
 func TestGetCallbackParamsFromRequestFormValues(t *testing.T) {
@@ -100,6 +120,25 @@ func TestGetCallbackParamsFromRequestFormValues(t *testing.T) {
 	}
 	if params.IDToken != "test_id_token" {
 		t.Fatalf("expected id_token %s to equal test_id_token", params.IDToken)
+	}
+}
+
+func TestGetCallbackParamsFromRequestFormValuesBadFormRequest(t *testing.T) {
+	testBadFormRequest := &http.Request{
+		// ensures it reads the body
+		Method: "POST",
+		// string with bad url encoding '%3z'
+		Body: io.NopCloser(strings.NewReader("foo%3z1%26bar%3D2")),
+		// ensures it parses the body as post form
+		Header: map[string][]string{
+			"Content-Type": []string{
+				"application/x-www-form-urlencoded",
+			},
+		},
+	}
+	_, err := GetCallbackParamsFromRequestFormValues(testBadFormRequest)
+	if err == nil || !strings.Contains(err.Error(), "failed to parse request formvalues:") {
+		t.Fatalf("expected error: %v", err)
 	}
 }
 
@@ -124,5 +163,14 @@ func TestBuildLoginResponseRedirectURL(t *testing.T) {
 
 	if redirUrl != expectedRedirUrl {
 		t.Fatalf("expected redirect URL to be %s got %s", expectedRedirUrl, redirUrl)
+	}
+}
+
+func TestBuildLoginResponseRedirectURLBadPlatformAuthLoginUrl(t *testing.T) {
+	_, err := BuildLoginResponseRedirectURL(
+		peregrine.OIDCLoginResponseParams{}, "foo%3z1%26bar%3D2", "/lti/callback",
+	)
+	if err == nil || !strings.Contains(err.Error(), "failed to build OIDC login response redirect URL:") {
+		t.Fatalf("expected error: %v", err)
 	}
 }
