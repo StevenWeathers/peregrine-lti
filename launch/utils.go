@@ -74,6 +74,15 @@ func GetLoginParamsFromRequestFormValues(r *http.Request) (peregrine.OIDCLoginRe
 		LTIDeploymentID: r.FormValue("lti_deployment_id"),
 	}
 
+	// Canvas LMS does not follow LTI 1.3 spec for lti_deployment_id
+	// see https://github.com/instructure/canvas-lms/issues/2201
+	// and https://canvas.instructure.com/doc/api/file.lti_dev_key_config.html#step-1-login-initiation
+	// this workaround should be removed once Canvas has fixed their implementation.
+	outOfSpecDeploymentID := r.FormValue("deployment_id")
+	if resp.LTIDeploymentID == "" && outOfSpecDeploymentID != "" {
+		resp.LTIDeploymentID = outOfSpecDeploymentID
+	}
+
 	return resp, nil
 }
 
