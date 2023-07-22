@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2023-07-22
+
+### Added
+- Canvas LMS `deployment_id` login parameter that doesn't follow 1.3 specs `lti_deployment_id` parameter
+- LTI trademark IMS Global to readme
+- Additional launch unit tests for error scenarios
+
 ## [0.10.0] - 2023-07-02
 
 ### Added
