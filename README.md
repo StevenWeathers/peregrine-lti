@@ -116,4 +116,6 @@ Please read [Contributing guide](CONTRIBUTING.md) for details on our code of con
 
 ## License
 
-[Apache 2.0](LICENSE)
+[![APACHE2 License](https://img.shields.io/github/license/StevenWeathers/peregrine-lti)](LICENSE)
+
+> *Learning Tools Interoperability® (LTI®) is a trademark of the 1EdTech Consortium Inc. (https://www.1edtech.org)*
