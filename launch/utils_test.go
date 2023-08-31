@@ -92,6 +92,41 @@ func TestGetLoginParamsFromRequestFormValues(t *testing.T) {
 	}
 }
 
+func TestGetLoginParamsFromRequestFormValuesCanvasDeploymentID(t *testing.T) {
+	urlValues := url.Values{}
+	urlValues.Add("iss", "test_iss")
+	urlValues.Add("login_hint", "test_login_hint")
+	urlValues.Add("target_link_uri", "test_target_link_uri")
+	urlValues.Add("lti_message_hint", "test_lti_message_hint")
+	urlValues.Add("client_id", "test_client_id")
+	urlValues.Add("deployment_id", "test_deployment_id")
+	params, err := GetLoginParamsFromRequestFormValues(&http.Request{
+		Form: urlValues,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if params.Issuer != "test_iss" {
+		t.Fatalf("expected issuer %s to equal test_iss", params.Issuer)
+	}
+	if params.LoginHint != "test_login_hint" {
+		t.Fatalf("expected login_hint %s to equal test_login_hint", params.LoginHint)
+	}
+	if params.TargetLinkURI != "test_target_link_uri" {
+		t.Fatalf("expected target_link_uri %s to equal test_target_link_uri", params.TargetLinkURI)
+	}
+	if params.ClientID != "test_client_id" {
+		t.Fatalf("expected client_id %s to equal test_client_id", params.ClientID)
+	}
+	if params.LTIMessageHint != "test_lti_message_hint" {
+		t.Fatalf("expected lti_message_hint %s to equal test_lti_message_hint", params.LTIMessageHint)
+	}
+	if params.LTIDeploymentID != "test_deployment_id" {
+		t.Fatalf("expected lti_deployment_id %s to equal test_deployment_id", params.LTIDeploymentID)
+	}
+}
+
 func TestGetLoginParamsFromRequestFormValuesBadFormRequest(t *testing.T) {
 	testBadFormRequest := &http.Request{
 		// ensures it reads the body
