@@ -18,29 +18,32 @@ import (
 	"github.com/stevenweathers/peregrine-lti/peregrine"
 )
 
-var canvasTestIssuer = "https://canvas.test.instructure.com"
-var canvasTestJWKURL = "/canvaslms/api/lti/security/jwks"
-var canvasTestLoginUrl = "/canvaslms/api/lti/authorize_redirect"
-var happyPathIssuer = "https://stevenweathers.dev"
-var happyPathTargetLinkURI = "https://stevenweathers.dev/"
-var happyPathPlatform peregrine.Platform
-var happyPathSubClaim = "4cfa2adf-9389-425a-a7d1-436f987cdb11"
-var happyPathClientID = "150420000000000007"
-var happyPathPlatformInstanceGUID = "someuuidforcanvaslms:canvas-lms"
-var happyPathPlatformDeploymentID = "007:9ac4b5c1c2db02e7c70db53837fe8bd47a5e309c"
-var happyPathPlatformID = uuid.MustParse("d159b4e7-b790-4f8f-a90b-ae2ce934cfaf")
-var happyPathDeploymentID = uuid.MustParse("8024616d-312b-4249-8880-0ecd89e8b909")
-var happyPathLaunchID = uuid.MustParse("5daca535-415c-4bfe-8a0e-a7fba8f5d1eb")
-var happyPathNonce = uuid.MustParse("1ff74ccf-8d02-45c0-a881-98f4bf52298f")
-var happyPathPlatformInstanceID = uuid.MustParse("52166f98-f932-4ccf-ae71-e0ae10255e4f")
-var happyPathRegistrationID = uuid.MustParse("7b556115-9460-4f1e-835e-cb11a7301f7d")
-var happyPathLaunchWithDeploymentID = uuid.MustParse("65ec0a8c-48e2-423b-b6e0-d1143292d550")
-var testLaunchFailureDeploymentID = uuid.MustParse("8024616d-312b-4249-8880-0ecd89e8b900")
-var testLaunchFailurePlatformDeploymentID = "006:9ac4b5c1c2db02e7c70db53837fe8bd47a5e309c"
-var testDeploymentUpsertFailurePlatformDeploymentID = "005:9ac4b5c1c2db02e7c70db53837fe8bd47a5e309c"
-var testJWTSecret = "godofthunder"
-var testStoreSvc *mockStoreSvc
-var srvUrl string
+const (
+	toolPlatformClaim        = "https://purl.imsglobal.org/spec/lti/claim/tool_platform"
+	canvasTestIssuer         = "https://canvas.test.instructure.com"
+	canvasTestJWKURL         = "/canvaslms/api/lti/security/jwks"
+	canvasTestLoginUrl       = "/canvaslms/api/lti/authorize_redirect"
+	testIssuer               = "https://stevenweathers.dev"
+	testTargetLinkURI        = "https://stevenweathers.dev/"
+	testSubClaim             = "4cfa2adf-9389-425a-a7d1-436f987cdb11"
+	testClientID             = "150420000000000007"
+	testPlatformInstanceGUID = "someuuidforcanvaslms:canvas-lms"
+	testPlatformDeploymentID = "007:9ac4b5c1c2db02e7c70db53837fe8bd47a5e309c"
+	testJWTSecret            = "godofthunder"
+)
+
+var (
+	happyPathPlatform          peregrine.Platform
+	testPlatformID             = uuid.MustParse("d159b4e7-b790-4f8f-a90b-ae2ce934cfaf")
+	testDeploymentID           = uuid.MustParse("8024616d-312b-4249-8880-0ecd89e8b909")
+	testLaunchID               = uuid.MustParse("5daca535-415c-4bfe-8a0e-a7fba8f5d1eb")
+	testNonce                  = uuid.MustParse("1ff74ccf-8d02-45c0-a881-98f4bf52298f")
+	testPlatformInstanceID     = uuid.MustParse("52166f98-f932-4ccf-ae71-e0ae10255e4f")
+	testRegistrationID         = uuid.MustParse("7b556115-9460-4f1e-835e-cb11a7301f7d")
+	testLaunchWithDeploymentID = uuid.MustParse("65ec0a8c-48e2-423b-b6e0-d1143292d550")
+	testStoreSvc               *mockStoreSvc
+	testSrvUrl                 string
+)
 
 func TestMain(m *testing.M) {
 	// Setup a mock JWK keyset and server
@@ -86,9 +89,9 @@ func TestMain(m *testing.M) {
 		server:       srv,
 	}
 
-	srvUrl = srv.URL
+	testSrvUrl = srv.URL
 	happyPathPlatform = peregrine.Platform{
-		ID:           happyPathPlatformID,
+		ID:           testPlatformID,
 		Issuer:       canvasTestIssuer,
 		KeySetURL:    srv.URL + canvasTestJWKURL,
 		AuthLoginURL: srv.URL + canvasTestLoginUrl,
@@ -103,14 +106,14 @@ func TestHandleOidcLoginHappyPath(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
+		Issuer:       testIssuer,
 	}, testStoreSvc)
 
 	resp, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
 		Issuer:          canvasTestIssuer,
 		LoginHint:       "32",
-		TargetLinkURI:   happyPathTargetLinkURI,
-		ClientID:        happyPathClientID,
+		TargetLinkURI:   testTargetLinkURI,
+		ClientID:        testClientID,
 		LTIMessageHint:  "",
 		LTIDeploymentID: "",
 	})
@@ -130,8 +133,8 @@ func TestHandleOidcLoginHappyPath(t *testing.T) {
 	if resp.OIDCLoginResponseParams.Prompt != "none" {
 		t.Fatalf("OIDCLoginResponseParams.Prompt expected none got %s", resp.OIDCLoginResponseParams.Prompt)
 	}
-	if resp.OIDCLoginResponseParams.Nonce != happyPathNonce.String() {
-		t.Fatalf("expected OIDCLoginResponseParams.Nonce %s to match %s", resp.OIDCLoginResponseParams.Nonce, happyPathNonce.String())
+	if resp.OIDCLoginResponseParams.Nonce != testNonce.String() {
+		t.Fatalf("expected OIDCLoginResponseParams.Nonce %s to match %s", resp.OIDCLoginResponseParams.Nonce, testNonce.String())
 	}
 	if resp.OIDCLoginResponseParams.LoginHint != "32" {
 		t.Fatalf("expected OIDCLoginResponseParams.LoginHint to be 32")
@@ -144,8 +147,8 @@ func TestHandleOidcLoginHappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if launchID != happyPathLaunchID {
-		t.Fatalf("expected OIDCLoginResponseParams.State to be generated JTW with launch id of %s got %s", happyPathLaunchID, launchID)
+	if launchID != testLaunchID {
+		t.Fatalf("expected OIDCLoginResponseParams.State to be generated JTW with launch id of %s got %s", testLaunchID, launchID)
 	}
 }
 
@@ -153,14 +156,14 @@ func TestHandleOidcLoginHappyPathWithLTIMessageHint(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
+		Issuer:       testIssuer,
 	}, testStoreSvc)
 
 	resp, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
 		Issuer:          canvasTestIssuer,
 		LoginHint:       "32",
-		TargetLinkURI:   happyPathTargetLinkURI,
-		ClientID:        happyPathClientID,
+		TargetLinkURI:   testTargetLinkURI,
+		ClientID:        testClientID,
 		LTIMessageHint:  "42",
 		LTIDeploymentID: "",
 	})
@@ -180,8 +183,8 @@ func TestHandleOidcLoginHappyPathWithLTIMessageHint(t *testing.T) {
 	if resp.OIDCLoginResponseParams.Prompt != "none" {
 		t.Fatalf("OIDCLoginResponseParams.Prompt expected none got %s", resp.OIDCLoginResponseParams.Prompt)
 	}
-	if resp.OIDCLoginResponseParams.Nonce != happyPathNonce.String() {
-		t.Fatalf("expected OIDCLoginResponseParams.Nonce %s to match %s", resp.OIDCLoginResponseParams.Nonce, happyPathNonce.String())
+	if resp.OIDCLoginResponseParams.Nonce != testNonce.String() {
+		t.Fatalf("expected OIDCLoginResponseParams.Nonce %s to match %s", resp.OIDCLoginResponseParams.Nonce, testNonce.String())
 	}
 	if resp.OIDCLoginResponseParams.LoginHint != "32" {
 		t.Fatalf("expected OIDCLoginResponseParams.LoginHint to be 32")
@@ -194,8 +197,8 @@ func TestHandleOidcLoginHappyPathWithLTIMessageHint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if launchID != happyPathLaunchID {
-		t.Fatalf("expected OIDCLoginResponseParams.State to be generated JTW with launch id of %s got %s", happyPathLaunchID, launchID)
+	if launchID != testLaunchID {
+		t.Fatalf("expected OIDCLoginResponseParams.State to be generated JTW with launch id of %s got %s", testLaunchID, launchID)
 	}
 }
 
@@ -203,16 +206,16 @@ func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
+		Issuer:       testIssuer,
 	}, testStoreSvc)
 
 	resp, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
 		Issuer:          canvasTestIssuer,
 		LoginHint:       "32",
-		TargetLinkURI:   happyPathTargetLinkURI,
-		ClientID:        happyPathClientID,
+		TargetLinkURI:   testTargetLinkURI,
+		ClientID:        testClientID,
 		LTIMessageHint:  "",
-		LTIDeploymentID: happyPathPlatformDeploymentID,
+		LTIDeploymentID: testPlatformDeploymentID,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -230,8 +233,8 @@ func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
 	if resp.OIDCLoginResponseParams.Prompt != "none" {
 		t.Fatalf("OIDCLoginResponseParams.Prompt expected none got %s", resp.OIDCLoginResponseParams.Prompt)
 	}
-	if resp.OIDCLoginResponseParams.Nonce != happyPathNonce.String() {
-		t.Fatalf("expected OIDCLoginResponseParams.Nonce %s to match %s", resp.OIDCLoginResponseParams.Nonce, happyPathNonce.String())
+	if resp.OIDCLoginResponseParams.Nonce != testNonce.String() {
+		t.Fatalf("expected OIDCLoginResponseParams.Nonce %s to match %s", resp.OIDCLoginResponseParams.Nonce, testNonce.String())
 	}
 	if resp.OIDCLoginResponseParams.LoginHint != "32" {
 		t.Fatalf("expected OIDCLoginResponseParams.LoginHint to be 32")
@@ -244,8 +247,8 @@ func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if launchID != happyPathLaunchID {
-		t.Fatalf("expected OIDCLoginResponseParams.State to be generated JTW with launch id of %s got %s", happyPathLaunchID, launchID)
+	if launchID != testLaunchID {
+		t.Fatalf("expected OIDCLoginResponseParams.State to be generated JTW with launch id of %s got %s", testLaunchID, launchID)
 	}
 }
 
@@ -253,13 +256,13 @@ func TestHandleOidcLoginInvalidParams(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
+		Issuer:       testIssuer,
 	}, testStoreSvc)
 
 	_, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
 		Issuer:          canvasTestIssuer,
 		LoginHint:       "32",
-		TargetLinkURI:   happyPathTargetLinkURI,
+		TargetLinkURI:   testTargetLinkURI,
 		ClientID:        "",
 		LTIMessageHint:  "",
 		LTIDeploymentID: "",
@@ -273,18 +276,18 @@ func TestHandleOidcLoginClientIDNotFound(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
-	}, testStoreSvc)
+		Issuer:       testIssuer,
+	}, &mockStoreSvcWithRegistrationNotFound{})
 
 	_, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
 		Issuer:          canvasTestIssuer,
 		LoginHint:       "32",
-		TargetLinkURI:   happyPathTargetLinkURI,
-		ClientID:        "unknown",
+		TargetLinkURI:   testTargetLinkURI,
+		ClientID:        testClientID,
 		LTIMessageHint:  "",
 		LTIDeploymentID: "",
 	})
-	if err.Error() != "failed to get registration by client id unknown: REGISTRATION_NOT_FOUND" {
+	if err.Error() != fmt.Sprintf("failed to get registration by client id %s: REGISTRATION_NOT_FOUND", testClientID) {
 		t.Fatalf("expected invalid params: %v", err)
 	}
 }
@@ -293,18 +296,18 @@ func TestHandleOidcLoginIncorrectIssuer(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
+		Issuer:       testIssuer,
 	}, testStoreSvc)
 
 	_, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
 		Issuer:          "https://canvas.instructure.com",
 		LoginHint:       "32",
-		TargetLinkURI:   happyPathTargetLinkURI,
-		ClientID:        happyPathClientID,
+		TargetLinkURI:   testTargetLinkURI,
+		ClientID:        testClientID,
 		LTIMessageHint:  "",
 		LTIDeploymentID: "",
 	})
-	if err.Error() != "request issuer https://canvas.instructure.com does not match registration issuer https://canvas.test.instructure.com" {
+	if err.Error() != fmt.Sprintf("request issuer https://canvas.instructure.com does not match registration issuer %s", canvasTestIssuer) {
 		t.Fatalf("expected invalid params: %v", err)
 	}
 }
@@ -313,18 +316,18 @@ func TestHandleOidcLoginUpsertDeploymentFailure(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
-	}, testStoreSvc)
+		Issuer:       testIssuer,
+	}, &mockStoreSvcWithFailedDeploymentUpsert{})
 
 	_, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
-		Issuer:          "https://canvas.test.instructure.com",
+		Issuer:          canvasTestIssuer,
 		LoginHint:       "32",
-		TargetLinkURI:   happyPathTargetLinkURI,
-		ClientID:        happyPathClientID,
+		TargetLinkURI:   testTargetLinkURI,
+		ClientID:        testClientID,
 		LTIMessageHint:  "",
-		LTIDeploymentID: testDeploymentUpsertFailurePlatformDeploymentID,
+		LTIDeploymentID: testDeploymentID.String(),
 	})
-	if err.Error() != "failed to upsert deployment 005:9ac4b5c1c2db02e7c70db53837fe8bd47a5e309c: upsert deployment forced failure" {
+	if err.Error() != "failed to upsert deployment 8024616d-312b-4249-8880-0ecd89e8b909: upsert deployment forced failure" {
 		t.Fatalf("expected upsert deployment failure: %v", err)
 	}
 }
@@ -333,16 +336,16 @@ func TestHandleOidcLoginCreateLaunchFailure(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
-	}, testStoreSvc)
+		Issuer:       testIssuer,
+	}, &mockStoreSvcWithFailedLaunchCreate{})
 
 	_, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
-		Issuer:          "https://canvas.test.instructure.com",
+		Issuer:          canvasTestIssuer,
 		LoginHint:       "32",
-		TargetLinkURI:   happyPathTargetLinkURI,
-		ClientID:        happyPathClientID,
+		TargetLinkURI:   testTargetLinkURI,
+		ClientID:        testClientID,
 		LTIMessageHint:  "",
-		LTIDeploymentID: testLaunchFailurePlatformDeploymentID,
+		LTIDeploymentID: testDeploymentID.String(),
 	})
 	if err.Error() != "failed to create launch: test create launch failed" {
 		t.Fatalf("expected launch create failure: %v", err)
@@ -353,10 +356,10 @@ func TestHandleOidcCallbackHappyPath(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
+		Issuer:       testIssuer,
 	}, testStoreSvc)
 
-	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchID)
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -365,14 +368,14 @@ func TestHandleOidcCallbackHappyPath(t *testing.T) {
 	tok, err := jwt.NewBuilder().
 		Issuer(canvasTestIssuer).
 		IssuedAt(time.Now()).
-		Audience([]string{happyPathClientID}).
-		Subject(happyPathSubClaim).
+		Audience([]string{testClientID}).
+		Subject(testSubClaim).
 		Expiration(time.Now().Add(time.Minute*10)).
-		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(nonceClaim, testNonce.String()).
 		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
 		Claim(ltiVersionClaim, ltiVersionClaimValue).
-		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
-		Claim(ltiDeploymentIdClaim, happyPathPlatformDeploymentID).
+		Claim(ltiTargetLinkUriClaim, testTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, testPlatformDeploymentID).
 		Build()
 	if err != nil {
 		panic(err)
@@ -399,10 +402,10 @@ func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
+		Issuer:       testIssuer,
 	}, testStoreSvc)
 
-	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchWithDeploymentID)
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchWithDeploymentID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -411,14 +414,14 @@ func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
 	tok, err := jwt.NewBuilder().
 		Issuer(canvasTestIssuer).
 		IssuedAt(time.Now()).
-		Audience([]string{happyPathClientID}).
-		Subject(happyPathSubClaim).
+		Audience([]string{testClientID}).
+		Subject(testSubClaim).
 		Expiration(time.Now().Add(time.Minute*10)).
-		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(nonceClaim, testNonce.String()).
 		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
 		Claim(ltiVersionClaim, ltiVersionClaimValue).
-		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
-		Claim(ltiDeploymentIdClaim, happyPathPlatformDeploymentID).
+		Claim(ltiTargetLinkUriClaim, testTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, testPlatformDeploymentID).
 		Build()
 	if err != nil {
 		panic(err)
@@ -445,10 +448,10 @@ func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
+		Issuer:       testIssuer,
 	}, testStoreSvc)
 
-	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchID)
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -457,16 +460,16 @@ func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
 	tok, err := jwt.NewBuilder().
 		Issuer(canvasTestIssuer).
 		IssuedAt(time.Now()).
-		Audience([]string{happyPathClientID}).
-		Subject(happyPathSubClaim).
+		Audience([]string{testClientID}).
+		Subject(testSubClaim).
 		Expiration(time.Now().Add(time.Minute*10)).
-		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(nonceClaim, testNonce.String()).
 		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
 		Claim(ltiVersionClaim, ltiVersionClaimValue).
-		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
-		Claim(ltiDeploymentIdClaim, happyPathPlatformDeploymentID).
-		Claim("https://purl.imsglobal.org/spec/lti/claim/tool_platform", peregrine.PlatformInstanceClaim{
-			GUID: happyPathPlatformInstanceGUID,
+		Claim(ltiTargetLinkUriClaim, testTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, testPlatformDeploymentID).
+		Claim(toolPlatformClaim, peregrine.PlatformInstanceClaim{
+			GUID: testPlatformInstanceGUID,
 		}).
 		Build()
 	if err != nil {
@@ -494,7 +497,7 @@ func TestHandleOidcCallbackInvalidState(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
+		Issuer:       testIssuer,
 	}, testStoreSvc)
 
 	_, err := launchSvc.HandleOidcCallback(context.Background(), peregrine.OIDCAuthenticationResponse{
@@ -510,10 +513,10 @@ func TestHandleOidcCallbackInvalidIDToken(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
+		Issuer:       testIssuer,
 	}, testStoreSvc)
 
-	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchID)
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -531,10 +534,10 @@ func TestHandleOidcCallbackLaunchIDNotFound(t *testing.T) {
 	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
+		Issuer:       testIssuer,
 	}, testStoreSvc)
 
-	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathDeploymentID)
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testDeploymentID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -543,14 +546,14 @@ func TestHandleOidcCallbackLaunchIDNotFound(t *testing.T) {
 	tok, err := jwt.NewBuilder().
 		Issuer(canvasTestIssuer).
 		IssuedAt(time.Now()).
-		Audience([]string{happyPathClientID}).
-		Subject(happyPathSubClaim).
+		Audience([]string{testClientID}).
+		Subject(testSubClaim).
 		Expiration(time.Now().Add(time.Minute*10)).
-		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(nonceClaim, testNonce.String()).
 		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
 		Claim(ltiVersionClaim, ltiVersionClaimValue).
-		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
-		Claim(ltiDeploymentIdClaim, happyPathPlatformDeploymentID).
+		Claim(ltiTargetLinkUriClaim, testTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, testPlatformDeploymentID).
 		Build()
 	if err != nil {
 		panic(err)
@@ -571,12 +574,13 @@ func TestHandleOidcCallbackLaunchIDNotFound(t *testing.T) {
 
 func TestHandleOidcCallbackDeploymentUpsertFailure(t *testing.T) {
 	t.Parallel()
+
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
-		Issuer:       happyPathIssuer,
-	}, testStoreSvc)
+		Issuer:       testIssuer,
+	}, &mockStoreSvcWithFailedDeploymentUpsert{})
 
-	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, happyPathLaunchID)
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -585,14 +589,14 @@ func TestHandleOidcCallbackDeploymentUpsertFailure(t *testing.T) {
 	tok, err := jwt.NewBuilder().
 		Issuer(canvasTestIssuer).
 		IssuedAt(time.Now()).
-		Audience([]string{happyPathClientID}).
-		Subject(happyPathSubClaim).
+		Audience([]string{testClientID}).
+		Subject(testSubClaim).
 		Expiration(time.Now().Add(time.Minute*10)).
-		Claim(nonceClaim, happyPathNonce.String()).
+		Claim(nonceClaim, testNonce.String()).
 		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
 		Claim(ltiVersionClaim, ltiVersionClaimValue).
-		Claim(ltiTargetLinkUriClaim, happyPathTargetLinkURI).
-		Claim(ltiDeploymentIdClaim, testDeploymentUpsertFailurePlatformDeploymentID).
+		Claim(ltiTargetLinkUriClaim, testTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, testPlatformDeploymentID).
 		Build()
 	if err != nil {
 		panic(err)
@@ -611,7 +615,140 @@ func TestHandleOidcCallbackDeploymentUpsertFailure(t *testing.T) {
 	}
 }
 
-// -- MOCKS --
+func TestHandleOidcCallbackWithUpdateLaunchFailure(t *testing.T) {
+	t.Parallel()
+	launchSvc := New(Config{
+		JWTKeySecret: testJWTSecret,
+		Issuer:       testIssuer,
+	}, &mockStoreSvcWithFailedLaunchUpdate{})
+
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a mock id_token
+	tok, err := jwt.NewBuilder().
+		Issuer(canvasTestIssuer).
+		IssuedAt(time.Now()).
+		Audience([]string{testClientID}).
+		Subject(testSubClaim).
+		Expiration(time.Now().Add(time.Minute*10)).
+		Claim(nonceClaim, testNonce.String()).
+		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
+		Claim(ltiVersionClaim, ltiVersionClaimValue).
+		Claim(ltiTargetLinkUriClaim, testTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, testPlatformDeploymentID).
+		Build()
+	if err != nil {
+		panic(err)
+	}
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = launchSvc.HandleOidcCallback(context.Background(), peregrine.OIDCAuthenticationResponse{
+		State:   state,
+		IDToken: string(signedIdToken),
+	})
+
+	if err == nil || !strings.Contains(err.Error(), "update launch forced failure") {
+		t.Fatalf("expected error: %v", err)
+	}
+}
+
+func TestHandleOidcCallbackWithUpsertPlatformInstanceFailure(t *testing.T) {
+	t.Parallel()
+	launchSvc := New(Config{
+		JWTKeySecret: testJWTSecret,
+		Issuer:       testIssuer,
+	}, &mockStoreSvcWithFailedPlatformInstanceUpsert{})
+
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a mock id_token
+	tok, err := jwt.NewBuilder().
+		Issuer(canvasTestIssuer).
+		IssuedAt(time.Now()).
+		Audience([]string{testClientID}).
+		Subject(testSubClaim).
+		Expiration(time.Now().Add(time.Minute*10)).
+		Claim(nonceClaim, testNonce.String()).
+		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
+		Claim(ltiVersionClaim, ltiVersionClaimValue).
+		Claim(ltiTargetLinkUriClaim, testTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, testPlatformDeploymentID).
+		Claim(toolPlatformClaim, peregrine.PlatformInstanceClaim{
+			GUID: testPlatformInstanceGUID,
+		}).
+		Build()
+	if err != nil {
+		panic(err)
+	}
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = launchSvc.HandleOidcCallback(context.Background(), peregrine.OIDCAuthenticationResponse{
+		State:   state,
+		IDToken: string(signedIdToken),
+	})
+
+	if err == nil || !strings.Contains(err.Error(), "upsert platform instance forced failure") {
+		t.Fatalf("expected error: %v", err)
+	}
+}
+
+func TestHandleOidcCallbackInvalidSubjectClaim(t *testing.T) {
+	t.Parallel()
+	launchSvc := New(Config{
+		JWTKeySecret: testJWTSecret,
+		Issuer:       testIssuer,
+	}, testStoreSvc)
+
+	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tooLongSub := "7SjE7orkCPiIyad9miJuOFEHoL5TUppLnVE6qbtJgS0FzoQxDa3G86lOMczmb6rfIkcnkukdC3R1xYXcI353k9WsVdZfyUohVxFaLbrdarvbex1YwQ0lTiHirx1gP82eYC1rspJoHOfHXU2Wa9UI47MPEUTTgkQOCBiakOh5B43amp7pmw5FdbsY1rJxs2xQbGMnAZ12rR2qMPqufT0JM1FFMYmqieC8TTRtX4XlXt0QsOSPFyLJ94VeZDgg2q2C"
+
+	// Create a mock id_token
+	tok, err := jwt.NewBuilder().
+		Issuer(canvasTestIssuer).
+		IssuedAt(time.Now()).
+		Audience([]string{testClientID}).
+		Subject(tooLongSub).
+		Expiration(time.Now().Add(time.Minute*10)).
+		Claim(nonceClaim, testNonce.String()).
+		Claim(ltiMessageTypeClaim, ltiMessageTypeClaimValue).
+		Claim(ltiVersionClaim, ltiVersionClaimValue).
+		Claim(ltiTargetLinkUriClaim, testTargetLinkURI).
+		Claim(ltiDeploymentIdClaim, testPlatformDeploymentID).
+		Build()
+	if err != nil {
+		panic(err)
+	}
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = launchSvc.HandleOidcCallback(context.Background(), peregrine.OIDCAuthenticationResponse{
+		State:   state,
+		IDToken: string(signedIdToken),
+	})
+	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("sub %s in id_token exceeds 255 characters", tooLongSub)) {
+		t.Fatalf("expected error: %v", err)
+	}
+}
+
+// mockStoreSvc mocks the data store service dependency
 type mockStoreSvc struct {
 	idTokenKey   jwk.Key
 	jwkServerURL string
@@ -620,15 +757,15 @@ type mockStoreSvc struct {
 
 // UpsertPlatformInstanceByGUID should create a PlatformInstance if not existing returning PlatformInstance with ID
 func (s *mockStoreSvc) UpsertPlatformInstanceByGUID(ctx context.Context, instance peregrine.PlatformInstance) (peregrine.PlatformInstance, error) {
-	instance.ID = happyPathPlatformInstanceID
+	instance.ID = testPlatformInstanceID
 	return instance, nil
 }
 
 // GetRegistrationByClientID should return a Registration by ClientID
 func (s *mockStoreSvc) GetRegistrationByClientID(ctx context.Context, clientId string) (peregrine.Registration, error) {
 	reg := peregrine.Registration{}
-	if clientId == happyPathClientID {
-		reg.ID = happyPathRegistrationID
+	if clientId == testClientID {
+		reg.ID = testRegistrationID
 		reg.ClientID = clientId
 		reg.Platform = &happyPathPlatform
 	} else {
@@ -639,38 +776,32 @@ func (s *mockStoreSvc) GetRegistrationByClientID(ctx context.Context, clientId s
 
 // UpsertDeploymentByPlatformDeploymentID should create a Deployment if not existing returning a Deployment with ID
 func (s *mockStoreSvc) UpsertDeploymentByPlatformDeploymentID(ctx context.Context, deployment peregrine.Deployment) (peregrine.Deployment, error) {
-	deployment.ID = happyPathDeploymentID
-	if deployment.PlatformDeploymentID == testLaunchFailurePlatformDeploymentID {
-		deployment.ID = testLaunchFailureDeploymentID
-	}
-	if deployment.PlatformDeploymentID == testDeploymentUpsertFailurePlatformDeploymentID {
-		return deployment, fmt.Errorf("upsert deployment forced failure")
-	}
+	deployment.ID = testDeploymentID
 	return deployment, nil
 }
 
 // GetLaunch should return a Launch by ID
 func (s *mockStoreSvc) GetLaunch(ctx context.Context, id uuid.UUID) (peregrine.Launch, error) {
 	l := peregrine.Launch{}
-	if id == happyPathLaunchID {
-		l.ID = happyPathLaunchID
-		l.Nonce = happyPathNonce
+	if id == testLaunchID {
+		l.ID = testLaunchID
+		l.Nonce = testNonce
 		l.Registration = &peregrine.Registration{
-			ID:       happyPathRegistrationID,
-			ClientID: happyPathClientID,
+			ID:       testRegistrationID,
+			ClientID: testClientID,
 			Platform: &happyPathPlatform,
 		}
-	} else if id == happyPathLaunchWithDeploymentID {
-		l.ID = happyPathLaunchWithDeploymentID
-		l.Nonce = happyPathNonce
+	} else if id == testLaunchWithDeploymentID {
+		l.ID = testLaunchWithDeploymentID
+		l.Nonce = testNonce
 		l.Registration = &peregrine.Registration{
-			ID:       happyPathRegistrationID,
-			ClientID: happyPathClientID,
+			ID:       testRegistrationID,
+			ClientID: testClientID,
 			Platform: &happyPathPlatform,
 		}
 		l.Deployment = &peregrine.Deployment{
-			ID:                   happyPathDeploymentID,
-			PlatformDeploymentID: happyPathPlatformDeploymentID,
+			ID:                   testDeploymentID,
+			PlatformDeploymentID: testPlatformDeploymentID,
 		}
 	} else {
 		return l, fmt.Errorf("LAUNCH_NOT_FOUND")
@@ -680,15 +811,53 @@ func (s *mockStoreSvc) GetLaunch(ctx context.Context, id uuid.UUID) (peregrine.L
 
 // CreateLaunch should create a Launch returning Launch with ID and Nonce
 func (s *mockStoreSvc) CreateLaunch(ctx context.Context, launch peregrine.Launch) (peregrine.Launch, error) {
-	launch.ID = happyPathLaunchID
-	launch.Nonce = happyPathNonce
-	if launch.Deployment != nil && launch.Deployment.ID == testLaunchFailureDeploymentID {
-		return launch, fmt.Errorf("test create launch failed")
-	}
+	launch.ID = testLaunchID
+	launch.Nonce = testNonce
 	return launch, nil
 }
 
 // UpdateLaunch should update a Launch by ID
 func (s *mockStoreSvc) UpdateLaunch(ctx context.Context, launch peregrine.Launch) (peregrine.Launch, error) {
 	return launch, nil
+}
+
+// -- failure mocks
+type mockStoreSvcWithFailedLaunchCreate struct {
+	mockStoreSvc
+}
+
+func (s *mockStoreSvcWithFailedLaunchCreate) CreateLaunch(ctx context.Context, launch peregrine.Launch) (peregrine.Launch, error) {
+	return launch, fmt.Errorf("test create launch failed")
+}
+
+type mockStoreSvcWithFailedDeploymentUpsert struct {
+	mockStoreSvc
+}
+
+func (s *mockStoreSvcWithFailedDeploymentUpsert) UpsertDeploymentByPlatformDeploymentID(ctx context.Context, deployment peregrine.Deployment) (peregrine.Deployment, error) {
+	return deployment, fmt.Errorf("upsert deployment forced failure")
+}
+
+type mockStoreSvcWithFailedLaunchUpdate struct {
+	mockStoreSvc
+}
+
+func (s *mockStoreSvcWithFailedLaunchUpdate) UpdateLaunch(ctx context.Context, launch peregrine.Launch) (peregrine.Launch, error) {
+	return launch, fmt.Errorf("update launch forced failure")
+}
+
+type mockStoreSvcWithFailedPlatformInstanceUpsert struct {
+	mockStoreSvc
+}
+
+func (s *mockStoreSvcWithFailedPlatformInstanceUpsert) UpsertPlatformInstanceByGUID(ctx context.Context, instance peregrine.PlatformInstance) (peregrine.PlatformInstance, error) {
+	return instance, fmt.Errorf("upsert platform instance forced failure")
+}
+
+type mockStoreSvcWithRegistrationNotFound struct {
+	mockStoreSvc
+}
+
+func (s *mockStoreSvcWithRegistrationNotFound) GetRegistrationByClientID(ctx context.Context, clientId string) (peregrine.Registration, error) {
+	return peregrine.Registration{}, fmt.Errorf("REGISTRATION_NOT_FOUND")
 }

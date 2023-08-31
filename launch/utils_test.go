@@ -17,7 +17,7 @@ import (
 func TestGetPlatformJWKs(t *testing.T) {
 	t.Parallel()
 	c := jwk.NewCache(context.Background())
-	keySet, err := getPlatformJWKs(context.Background(), c, srvUrl+"/canvaslms/api/lti/security/jwks")
+	keySet, err := getPlatformJWKs(context.Background(), c, testSrvUrl+"/canvaslms/api/lti/security/jwks")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -27,7 +27,7 @@ func TestGetPlatformJWKs(t *testing.T) {
 		t.Fatalf("expected testkey to be found in jwks")
 	}
 
-	_, err = getPlatformJWKs(context.Background(), c, srvUrl+"/canvaslms/api/lti/security/badjwks")
+	_, err = getPlatformJWKs(context.Background(), c, testSrvUrl+"/canvaslms/api/lti/security/badjwks")
 	if err == nil || !strings.Contains(err.Error(), "failed to refresh platform keyset") {
 		t.Fatalf("expected error for getPlatformJWKs")
 	}
@@ -35,7 +35,7 @@ func TestGetPlatformJWKs(t *testing.T) {
 
 func TestCreateLaunchState(t *testing.T) {
 	t.Parallel()
-	launchState, err := createLaunchState(happyPathIssuer, testJWTSecret, happyPathLaunchID)
+	launchState, err := createLaunchState(testIssuer, testJWTSecret, testLaunchID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -47,14 +47,14 @@ func TestCreateLaunchState(t *testing.T) {
 	verifiedToken, _ := jwt.Parse([]byte(launchState), jwt.WithKey(jwa.HS256, key))
 	claims := verifiedToken.PrivateClaims()
 	lid, ok := claims[launchIDClaim]
-	if !ok || lid.(string) != happyPathLaunchID.String() {
-		t.Fatalf("expected state launch ID %s to equal %s", lid.(string), happyPathLaunchID.String())
+	if !ok || lid.(string) != testLaunchID.String() {
+		t.Fatalf("expected state launch ID %s to equal %s", lid.(string), testLaunchID.String())
 	}
 }
 
 func TestCreateLaunchStateEmptyJWTSecret(t *testing.T) {
 	t.Parallel()
-	_, err := createLaunchState(happyPathIssuer, "", happyPathLaunchID)
+	_, err := createLaunchState(testIssuer, "", testLaunchID)
 	if err == nil || !strings.Contains(err.Error(), "failed to create launch 5daca535-415c-4bfe-8a0e-a7fba8f5d1eb state jwk from configured secret") {
 		t.Fatalf("expected error: %v", err)
 	}
