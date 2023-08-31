@@ -7,6 +7,7 @@ import (
 )
 
 func TestValidateLoginRequestParams(t *testing.T) {
+	t.Parallel()
 	err := validateLoginRequestParams(
 		peregrine.OIDCLoginRequestParams{
 			Issuer:        "test_issuer",

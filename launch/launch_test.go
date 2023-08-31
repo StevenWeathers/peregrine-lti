@@ -100,6 +100,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestHandleOidcLoginHappyPath(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -149,6 +150,7 @@ func TestHandleOidcLoginHappyPath(t *testing.T) {
 }
 
 func TestHandleOidcLoginHappyPathWithLTIMessageHint(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -198,6 +200,7 @@ func TestHandleOidcLoginHappyPathWithLTIMessageHint(t *testing.T) {
 }
 
 func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -247,6 +250,7 @@ func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
 }
 
 func TestHandleOidcLoginInvalidParams(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -266,6 +270,7 @@ func TestHandleOidcLoginInvalidParams(t *testing.T) {
 }
 
 func TestHandleOidcLoginClientIDNotFound(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -285,6 +290,7 @@ func TestHandleOidcLoginClientIDNotFound(t *testing.T) {
 }
 
 func TestHandleOidcLoginIncorrectIssuer(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -304,6 +310,7 @@ func TestHandleOidcLoginIncorrectIssuer(t *testing.T) {
 }
 
 func TestHandleOidcLoginUpsertDeploymentFailure(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -323,6 +330,7 @@ func TestHandleOidcLoginUpsertDeploymentFailure(t *testing.T) {
 }
 
 func TestHandleOidcLoginCreateLaunchFailure(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -342,6 +350,7 @@ func TestHandleOidcLoginCreateLaunchFailure(t *testing.T) {
 }
 
 func TestHandleOidcCallbackHappyPath(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -387,6 +396,7 @@ func TestHandleOidcCallbackHappyPath(t *testing.T) {
 }
 
 func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -432,6 +442,7 @@ func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
 }
 
 func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -480,6 +491,7 @@ func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
 }
 
 func TestHandleOidcCallbackInvalidState(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -495,6 +507,7 @@ func TestHandleOidcCallbackInvalidState(t *testing.T) {
 }
 
 func TestHandleOidcCallbackInvalidIDToken(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -515,6 +528,7 @@ func TestHandleOidcCallbackInvalidIDToken(t *testing.T) {
 }
 
 func TestHandleOidcCallbackLaunchIDNotFound(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,
@@ -556,6 +570,7 @@ func TestHandleOidcCallbackLaunchIDNotFound(t *testing.T) {
 }
 
 func TestHandleOidcCallbackDeploymentUpsertFailure(t *testing.T) {
+	t.Parallel()
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       happyPathIssuer,

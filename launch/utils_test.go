@@ -15,6 +15,7 @@ import (
 )
 
 func TestGetPlatformJWKs(t *testing.T) {
+	t.Parallel()
 	c := jwk.NewCache(context.Background())
 	keySet, err := getPlatformJWKs(context.Background(), c, srvUrl+"/canvaslms/api/lti/security/jwks")
 	if err != nil {
@@ -33,6 +34,7 @@ func TestGetPlatformJWKs(t *testing.T) {
 }
 
 func TestCreateLaunchState(t *testing.T) {
+	t.Parallel()
 	launchState, err := createLaunchState(happyPathIssuer, testJWTSecret, happyPathLaunchID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -51,6 +53,7 @@ func TestCreateLaunchState(t *testing.T) {
 }
 
 func TestCreateLaunchStateEmptyJWTSecret(t *testing.T) {
+	t.Parallel()
 	_, err := createLaunchState(happyPathIssuer, "", happyPathLaunchID)
 	if err == nil || !strings.Contains(err.Error(), "failed to create launch 5daca535-415c-4bfe-8a0e-a7fba8f5d1eb state jwk from configured secret") {
 		t.Fatalf("expected error: %v", err)
@@ -58,6 +61,7 @@ func TestCreateLaunchStateEmptyJWTSecret(t *testing.T) {
 }
 
 func TestGetLoginParamsFromRequestFormValues(t *testing.T) {
+	t.Parallel()
 	urlValues := url.Values{}
 	urlValues.Add("iss", "test_iss")
 	urlValues.Add("login_hint", "test_login_hint")
@@ -93,6 +97,7 @@ func TestGetLoginParamsFromRequestFormValues(t *testing.T) {
 }
 
 func TestGetLoginParamsFromRequestFormValuesCanvasDeploymentID(t *testing.T) {
+	t.Parallel()
 	urlValues := url.Values{}
 	urlValues.Add("iss", "test_iss")
 	urlValues.Add("login_hint", "test_login_hint")
@@ -128,6 +133,7 @@ func TestGetLoginParamsFromRequestFormValuesCanvasDeploymentID(t *testing.T) {
 }
 
 func TestGetLoginParamsFromRequestFormValuesBadFormRequest(t *testing.T) {
+	t.Parallel()
 	testBadFormRequest := &http.Request{
 		// ensures it reads the body
 		Method: "POST",
@@ -147,6 +153,7 @@ func TestGetLoginParamsFromRequestFormValuesBadFormRequest(t *testing.T) {
 }
 
 func TestGetCallbackParamsFromRequestFormValues(t *testing.T) {
+	t.Parallel()
 	urlValues := url.Values{}
 	urlValues.Add("state", "test_state")
 	urlValues.Add("id_token", "test_id_token")
@@ -166,6 +173,7 @@ func TestGetCallbackParamsFromRequestFormValues(t *testing.T) {
 }
 
 func TestGetCallbackParamsFromRequestFormValuesBadFormRequest(t *testing.T) {
+	t.Parallel()
 	testBadFormRequest := &http.Request{
 		// ensures it reads the body
 		Method: "POST",
@@ -185,6 +193,7 @@ func TestGetCallbackParamsFromRequestFormValuesBadFormRequest(t *testing.T) {
 }
 
 func TestBuildLoginResponseRedirectURL(t *testing.T) {
+	t.Parallel()
 	expectedRedirUrl := "?client_id=test_client_id&login_hint=test_login_hint&lti_message_hint=test_lti_message_hint&nonce=test_nonce&prompt=none&redirect_uri=%2Flti%2Fcallback&response_mode=form_post&response_type=id_token&scope=openid&state=test_state"
 	redirUrl, err := BuildLoginResponseRedirectURL(
 		peregrine.OIDCLoginResponseParams{
@@ -209,6 +218,7 @@ func TestBuildLoginResponseRedirectURL(t *testing.T) {
 }
 
 func TestBuildLoginResponseRedirectURLBadPlatformAuthLoginUrl(t *testing.T) {
+	t.Parallel()
 	_, err := BuildLoginResponseRedirectURL(
 		peregrine.OIDCLoginResponseParams{}, "foo%3z1%26bar%3D2", "/lti/callback",
 	)
