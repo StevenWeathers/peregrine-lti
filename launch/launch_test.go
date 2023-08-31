@@ -41,38 +41,39 @@ var (
 	testPlatformInstanceID     = uuid.MustParse("52166f98-f932-4ccf-ae71-e0ae10255e4f")
 	testRegistrationID         = uuid.MustParse("7b556115-9460-4f1e-835e-cb11a7301f7d")
 	testLaunchWithDeploymentID = uuid.MustParse("65ec0a8c-48e2-423b-b6e0-d1143292d550")
-	testStoreSvc               *mockStoreSvc
+	testJwkKey                 jwk.Key
 	testSrvUrl                 string
 )
 
 func TestMain(m *testing.M) {
 	// Setup a mock JWK keyset and server
 	key, _ := jwk.FromRaw([]byte(testJWTSecret))
-	err := key.Set("kid", "testkey")
+	err := key.Set(jwk.KeyIDKey, "testkey")
 	if err != nil {
 		panic(err)
 	}
-	err = key.Set("alg", "HS256")
+	err = key.Set(jwk.AlgorithmKey, "HS256")
 	if err != nil {
 		panic(err)
+	}
+	keys := make([]jwk.Key, 0)
+
+	k, err := key.PublicKey()
+	if err != nil {
+		panic(err)
+	}
+	keys = append(keys, k)
+	type jwkResponse struct {
+		Keys []jwk.Key `json:"keys"`
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.String() != "/canvaslms/api/lti/security/jwks" {
+		if r.URL.String() != canvasTestJWKURL {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		type response struct {
-			Keys []jwk.Key `json:"keys"`
-		}
-		keys := make([]jwk.Key, 0)
 
-		k, err := key.PublicKey()
-		if err != nil {
-			panic(err)
-		}
-		keys = append(keys, k)
-		resp := response{
+		resp := jwkResponse{
 			Keys: keys,
 		}
 		ks, _ := json.Marshal(resp)
@@ -82,13 +83,9 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 	}))
+	defer srv.Close()
 
-	testStoreSvc = &mockStoreSvc{
-		idTokenKey:   key,
-		jwkServerURL: srv.URL,
-		server:       srv,
-	}
-
+	testJwkKey = key
 	testSrvUrl = srv.URL
 	happyPathPlatform = peregrine.Platform{
 		ID:           testPlatformID,
@@ -107,7 +104,7 @@ func TestHandleOidcLoginHappyPath(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       testIssuer,
-	}, testStoreSvc)
+	}, &mockStoreSvc{})
 
 	resp, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
 		Issuer:          canvasTestIssuer,
@@ -157,7 +154,7 @@ func TestHandleOidcLoginHappyPathWithLTIMessageHint(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       testIssuer,
-	}, testStoreSvc)
+	}, &mockStoreSvc{})
 
 	resp, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
 		Issuer:          canvasTestIssuer,
@@ -207,7 +204,7 @@ func TestHandleOidcLoginHappyPathWithDeploymentID(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       testIssuer,
-	}, testStoreSvc)
+	}, &mockStoreSvc{})
 
 	resp, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
 		Issuer:          canvasTestIssuer,
@@ -257,7 +254,7 @@ func TestHandleOidcLoginInvalidParams(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       testIssuer,
-	}, testStoreSvc)
+	}, &mockStoreSvc{})
 
 	_, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
 		Issuer:          canvasTestIssuer,
@@ -297,7 +294,7 @@ func TestHandleOidcLoginIncorrectIssuer(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       testIssuer,
-	}, testStoreSvc)
+	}, &mockStoreSvc{})
 
 	_, err := launchSvc.HandleOidcLogin(context.Background(), peregrine.OIDCLoginRequestParams{
 		Issuer:          "https://canvas.instructure.com",
@@ -357,7 +354,7 @@ func TestHandleOidcCallbackHappyPath(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       testIssuer,
-	}, testStoreSvc)
+	}, &mockStoreSvc{})
 
 	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchID)
 	if err != nil {
@@ -380,7 +377,7 @@ func TestHandleOidcCallbackHappyPath(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testJwkKey))
 	if err != nil {
 		panic(err)
 	}
@@ -403,7 +400,7 @@ func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       testIssuer,
-	}, testStoreSvc)
+	}, &mockStoreSvc{})
 
 	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchWithDeploymentID)
 	if err != nil {
@@ -426,7 +423,7 @@ func TestHandleOidcCallbackHappyPathWithLaunchDeploymentID(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testJwkKey))
 	if err != nil {
 		panic(err)
 	}
@@ -449,7 +446,7 @@ func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       testIssuer,
-	}, testStoreSvc)
+	}, &mockStoreSvc{})
 
 	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchID)
 	if err != nil {
@@ -475,7 +472,7 @@ func TestHandleOidcCallbackHappyPathWithPlatformInstanceID(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testJwkKey))
 	if err != nil {
 		panic(err)
 	}
@@ -498,7 +495,7 @@ func TestHandleOidcCallbackInvalidState(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       testIssuer,
-	}, testStoreSvc)
+	}, &mockStoreSvc{})
 
 	_, err := launchSvc.HandleOidcCallback(context.Background(), peregrine.OIDCAuthenticationResponse{
 		State:   "",
@@ -514,7 +511,7 @@ func TestHandleOidcCallbackInvalidIDToken(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       testIssuer,
-	}, testStoreSvc)
+	}, &mockStoreSvc{})
 
 	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchID)
 	if err != nil {
@@ -535,7 +532,7 @@ func TestHandleOidcCallbackLaunchIDNotFound(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       testIssuer,
-	}, testStoreSvc)
+	}, &mockStoreSvc{})
 
 	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testDeploymentID)
 	if err != nil {
@@ -558,7 +555,7 @@ func TestHandleOidcCallbackLaunchIDNotFound(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testJwkKey))
 	if err != nil {
 		panic(err)
 	}
@@ -601,7 +598,7 @@ func TestHandleOidcCallbackDeploymentUpsertFailure(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testJwkKey))
 	if err != nil {
 		panic(err)
 	}
@@ -643,7 +640,7 @@ func TestHandleOidcCallbackWithUpdateLaunchFailure(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testJwkKey))
 	if err != nil {
 		panic(err)
 	}
@@ -689,7 +686,7 @@ func TestHandleOidcCallbackWithUpsertPlatformInstanceFailure(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testJwkKey))
 	if err != nil {
 		panic(err)
 	}
@@ -709,7 +706,7 @@ func TestHandleOidcCallbackInvalidSubjectClaim(t *testing.T) {
 	launchSvc := New(Config{
 		JWTKeySecret: testJWTSecret,
 		Issuer:       testIssuer,
-	}, testStoreSvc)
+	}, &mockStoreSvc{})
 
 	state, err := createLaunchState(launchSvc.config.Issuer, launchSvc.config.JWTKeySecret, testLaunchID)
 	if err != nil {
@@ -734,7 +731,7 @@ func TestHandleOidcCallbackInvalidSubjectClaim(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testStoreSvc.idTokenKey))
+	signedIdToken, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256, testJwkKey))
 	if err != nil {
 		panic(err)
 	}
@@ -749,11 +746,7 @@ func TestHandleOidcCallbackInvalidSubjectClaim(t *testing.T) {
 }
 
 // mockStoreSvc mocks the data store service dependency
-type mockStoreSvc struct {
-	idTokenKey   jwk.Key
-	jwkServerURL string
-	server       *httptest.Server
-}
+type mockStoreSvc struct{}
 
 // UpsertPlatformInstanceByGUID should create a PlatformInstance if not existing returning PlatformInstance with ID
 func (s *mockStoreSvc) UpsertPlatformInstanceByGUID(ctx context.Context, instance peregrine.PlatformInstance) (peregrine.PlatformInstance, error) {

@@ -17,7 +17,7 @@ import (
 func TestGetPlatformJWKs(t *testing.T) {
 	t.Parallel()
 	c := jwk.NewCache(context.Background())
-	keySet, err := getPlatformJWKs(context.Background(), c, testSrvUrl+"/canvaslms/api/lti/security/jwks")
+	keySet, err := getPlatformJWKs(context.Background(), c, testSrvUrl+canvasTestJWKURL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
