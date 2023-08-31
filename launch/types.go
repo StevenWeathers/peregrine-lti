@@ -20,12 +20,14 @@ type Service struct {
 	jwkCache *jwk.Cache
 }
 
-// HandleOidcLoginResponse are the return values
+// HandleOidcLoginResponse contains the login params and redirect url to proceed with LTI launch
 type HandleOidcLoginResponse struct {
 	OIDCLoginResponseParams peregrine.OIDCLoginResponseParams
-	RedirectURL             string
+	// RedirectURL is the url for the Platform launch authentication
+	RedirectURL string
 }
 
+// HandleOidcCallbackResponse contains the lti 1.3 claims and peregrine.Launch of the successful LTI launch
 type HandleOidcCallbackResponse struct {
 	Claims peregrine.LTI1p3Claims
 	Launch peregrine.Launch
